@@ -70,6 +70,7 @@ interface ApiCapacity {
   slot: string;
   quota: number;
   booked: number;
+  is_active: boolean;
 }
 
 interface ApiItemDonation {
