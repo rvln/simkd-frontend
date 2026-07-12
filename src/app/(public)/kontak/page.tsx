@@ -31,7 +31,7 @@ const contactItems = [
   {
     icon: <FiMail className="text-xl text-primary" />,
     title: "Email",
-    lines: ["halo@panti.org", "donasi@panti.org"],
+    lines: ["panti.asuhan.drlucas@gmail.com", "drlucas@gmail.com"],
   },
 ];
 
@@ -41,7 +41,7 @@ export default function KontakPage() {
       {/* ═══════════════════════════════════════════
           SECTION 1 — HERO
       ═══════════════════════════════════════════ */}
-      <section className="px-6 md:px-12 lg:px-20 pt-14 pb-12">
+      <section className="px-6 md:px-12 lg:px-20 pt-18 pb-12">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter leading-[1.05] text-on-surface mb-6">
             Hubungi Kami

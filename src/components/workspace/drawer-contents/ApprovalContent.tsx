@@ -25,6 +25,7 @@ export interface ApprovalData {
   applicantRole: string;
   details: string;
   bringsDonation: boolean;
+  item_donations?: any[];
   capacityAvailable: boolean;
   status: string;
   is_expired?: boolean;
@@ -237,12 +238,12 @@ export function ApprovalContent({
               <FiAlertCircle className="text-xl flex-shrink-0 mt-0.5 text-blue-600" />
               <div>
                 <p className="font-bold text-sm">
-                  ℹ️ PENGAJUAN KEMBALI: User telah melakukan reschedule sesuai permintaan panti.
+                  ℹ️ Pengajuan kembali: User telah melakukan ubah jadwal sesuai permintaan panti.
                 </p>
                 {data.admin_notes && (
                   <div className="mt-3 bg-white/60 p-3 rounded-xl border border-blue-100">
                     <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">
-                      Catatan Reschedule Sebelumnya
+                      Catatan Ubah Jadwal Sebelumnya
                     </p>
                     <p className="text-xs text-blue-900 leading-relaxed italic">
                       &quot;{data.admin_notes}&quot;
@@ -343,6 +344,42 @@ export function ApprovalContent({
           </div>
         )}
 
+        {/* Barang Bawaan */}
+        {data.bringsDonation && data.item_donations && data.item_donations.length > 0 && (
+          <div className="bg-slate-50 p-4 rounded-2xl shadow-sm flex flex-col gap-3">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm font-bold text-gray-900">Barang Bawaan</span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {data.item_donations.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex flex-col gap-2 bg-white p-3 rounded-xl border border-slate-100 shadow-sm"
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-semibold text-gray-800">
+                      {item.itemName_snapshot}
+                    </span>
+                    <span className="text-sm font-bold text-teal-700">
+                      {item.qty} {item.unit ?? ""}
+                    </span>
+                  </div>
+                  {item.photo_url && (
+                    <a
+                      href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/storage/${item.photo_url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary font-semibold flex items-center gap-1 hover:underline self-start bg-primary/5 px-2 py-1 rounded-lg"
+                    >
+                      Lihat Foto Barang
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Dynamic Forms */}
         {isApproving && data.capacityAvailable && (
           <div className="animate-in fade-in slide-in-from-top-2 bg-teal-50/50 p-4 rounded-2xl border border-teal-100">
@@ -412,7 +449,7 @@ export function ApprovalContent({
                 bg: "bg-emerald-50 border-emerald-200",
                 icon: "text-emerald-500",
                 text: "text-emerald-700",
-                message: "Kunjungan telah selesai (Hadir).",
+                message: "Kunjungan telah berhasil (Hadir).",
               },
               NO_SHOW: {
                 bg: "bg-gray-50 border-gray-200",

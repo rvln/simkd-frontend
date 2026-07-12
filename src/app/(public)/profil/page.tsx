@@ -111,7 +111,7 @@ export default function ProfilPage() {
           {/* Image placeholder */}
           <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-surface-container-lowest shadow-ambient">
             <Image
-              src="/example_img/background-1.png"
+              src="/example_img/panti.jpg"
               alt="Sejarah Panti Asuhan Dr. J. Lucas"
               fill
               className="object-cover"
@@ -143,13 +143,13 @@ export default function ProfilPage() {
               </p>
             </div>
 
-            <Link
+            {/* <Link
               href="/sejarah"
               className="inline-flex items-center gap-2 mt-8 font-public-sans font-bold text-sm text-primary hover:text-primary-container transition-colors group"
             >
               Pelajari Arsip Kami
               <FiArrowRight className="text-lg transition-transform group-hover:translate-x-1" />
-            </Link>
+            </Link> */}
           </div>
         </div>
 
@@ -215,13 +215,13 @@ export default function ProfilPage() {
                 asrama tradisional menuju model unit keluarga yang lebih intim.
               </p>
             </div>
-            <Link
+            {/* <Link
               href="/struktur"
               className="flex items-center gap-2 text-primary font-public-sans font-bold text-xs uppercase tracking-widest hover:text-primary-container transition-colors shrink-0"
             >
               <FiExternalLink />
               Struktur Aktif 2026
-            </Link>
+            </Link> */}
           </div>
 
           {/* Unit Cards */}
@@ -351,7 +351,7 @@ export default function ProfilPage() {
       {/* ═══════════════════════════════════════════
           SECTION 6 — TRANSPARENCY PLEDGE
       ═══════════════════════════════════════════ */}
-      <section className="bg-surface-container-low px-6 md:px-12 lg:pt-12 lg:pb-12 lg:px-20 py-20 lg:py-24">
+      {/* <section className="bg-surface-container-low px-6 md:px-12 lg:pt-12 lg:pb-12 lg:px-20 py-20 lg:py-24">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-2xl md:text-3xl font-black tracking-tight text-on-surface mb-8">
             Keterbukaan adalah <span className="text-primary">Janji Kami.</span>
@@ -375,7 +375,7 @@ export default function ProfilPage() {
             </Link>
           </div>
         </div>
-      </section>
+      </section> */}
     </div>
   );
 }

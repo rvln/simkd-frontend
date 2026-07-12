@@ -815,7 +815,7 @@ export default function TransparansiContent() {
                             : "bg-tertiary text-white"
                         }`}
                       >
-                        {isCompleted ? "SELESAI" : "TERJADWAL"}
+                        {isCompleted ? "BERHASIL" : "TERJADWAL"}
                       </span>
                     </div>
                     <p className="text-xs text-on-surface-variant font-sans mb-2">

@@ -11,6 +11,8 @@ import {
   MdPersonAddAlt1,
   MdOutlineStore
 } from "react-icons/md";
+import { FiSave, FiSettings, FiCheckCircle } from "react-icons/fi";
+import { AlertModal } from "@/components/ui/AlertModal";
 
 // Mock Data untuk Daftar Staff
 const MOCK_STAFF = [
@@ -29,25 +31,29 @@ interface ProfilInstitusiForm {
 export default function PengaturanInstitusiPage() {
   // State untuk Manajemen Kapasitas
   const [capacity, setCapacity] = useState<number>(15);
+  const [alertMessage, setAlertMessage] = useState("");
+  const [showAlert, setShowAlert] = useState(false);
 
   const handleCapacitySubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    alert(`Kapasitas kunjungan berhasil diperbarui menjadi ${capacity} orang/sesi.`);
+    setAlertMessage(`Kapasitas kunjungan berhasil diperbarui menjadi ${capacity} orang/sesi.`);
+    setShowAlert(true);
   };
 
   // Setup react-hook-form untuk Manajemen Profil & Rekening
   const { register, handleSubmit, formState: { errors } } = useForm<ProfilInstitusiForm>({
     defaultValues: {
-      namaPanti: "Panti Asuhan Dr. Lucas",
+      namaPanti: "Panti Asuhan Dr. J. Lucas",
       whatsapp: "081234567890",
       alamat: "Jl. Kasih Sayang No. 123, Lingkungan V, Kota Manado, Sulawesi Utara",
-      rekeningBank: "BCA 1234567890 a.n Panti Asuhan Dr Lucas",
+      rekeningBank: "BCA 1234567890 a.n Panti Asuhan Dr. J. Lucas",
       ewallet: "OVO / GoPay: 081234567890"
     }
   });
 
   const onProfilSubmit = (data: ProfilInstitusiForm) => {
-    alert("Profil Institusi dan Rekening berhasil disimpan:\n" + JSON.stringify(data, null, 2));
+    setAlertMessage("Profil Institusi dan Rekening berhasil disimpan.");
+    setShowAlert(true);
   };
 
   return (
@@ -235,6 +241,11 @@ export default function PengaturanInstitusiPage() {
 
         </div>
       </div>
+      <AlertModal
+        isOpen={showAlert}
+        onClose={() => setShowAlert(false)}
+        message={alertMessage}
+      />
     </div>
   );
 }

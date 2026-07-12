@@ -16,7 +16,7 @@ function TransparansiSkeleton() {
   return (
     <>
       {/* Skeleton: Kebutuhan */}
-      <section className="bg-surface-container-low px-6 md:px-12 lg:px-20 py-16 lg:py-24">
+      <section className="bg-surface-container-low px- md:px-12 lg:px-20 py-16 lg:py-24">
         <div className="max-w-7xl mx-auto">
           <div className="mb-12">
             <div className="h-3 w-32 rounded bg-surface-container-lowest mb-3 animate-pulse" />
@@ -86,7 +86,7 @@ export default function TransparansiPage() {
       {/* ═══════════════════════════════════════════
           SECTION 1 — HERO (Static, Server-Rendered)
       ═══════════════════════════════════════════ */}
-      <section className="bg-surface px-6 md:px-12 lg:px-20 pt-14 pb-8 text-center">
+      <section className="bg-surface px-6 md:px-12 lg:px-20 pt-18 pb-8 text-center">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tighter leading-[1.08] text-on-surface mb-6 italic">
             Jejak Kebaikan Real-Time

@@ -13,6 +13,7 @@ import {
 } from "react-icons/fi";
 import { FaBoxOpen } from "react-icons/fa";
 import { GlobalDomainDrawer } from "@/components/workspace/GlobalDomainDrawer";
+import { AlertModal } from "@/components/ui/AlertModal";
 import {
   KebutuhanData,
   KebutuhanFormInputs,
@@ -123,6 +124,9 @@ export default function KelolaKebutuhanPage() {
   const [itemToDelete, setItemToDelete] = useState<KebutuhanData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [alertMessage, setAlertMessage] = useState("");
+  const [showAlert, setShowAlert] = useState(false);
+
   // ── Fetch list ───────────────────────────────────────────────────────────────
   const fetchItems = useCallback(async () => {
     setIsLoading(true);
@@ -227,7 +231,8 @@ export default function KelolaKebutuhanPage() {
       setItemToDelete(null);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Terjadi kesalahan";
-      alert(msg || "Terjadi kesalahan saat menghapus data.");
+      setAlertMessage(msg || "Terjadi kesalahan saat menghapus data.");
+      setShowAlert(true);
     } finally {
       setIsDeleting(false);
     }
@@ -599,6 +604,12 @@ export default function KelolaKebutuhanPage() {
           </div>
         </div>
       )}
+
+      <AlertModal
+        isOpen={showAlert}
+        onClose={() => setShowAlert(false)}
+        message={alertMessage}
+      />
     </div>
   );
 }

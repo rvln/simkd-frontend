@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GlassContainer } from "@/components/ui/GlassContainer";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
@@ -10,8 +10,10 @@ import {
   MdAddShoppingCart,
   MdOutlineDeleteOutline,
   MdArrowBack,
+  MdCloudUpload,
 } from "react-icons/md";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
+import { AlertModal } from "@/components/ui/AlertModal";
 import { useAuth } from "@/hooks/useAuth";
 
 /* ──────────────────────────────────────────
@@ -104,9 +106,33 @@ function DetailPengunjungContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  const [alertMessage, setAlertMessage] = useState("");
+  const [showAlert, setShowAlert] = useState(false);
+
+  const [userVisits, setUserVisits] = useState<any>(null);
+
   useEffect(() => {
     if (user) {
       setNamaField(prev => prev || user.name || "");
+      setWhatsappField(prev => prev || user.phone || "");
+
+      // Fetch user's existing visits to check for active ones on the same date
+      const token = localStorage.getItem("auth_token") || "";
+      if (token) {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/user/visits`, {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        })
+          .then((res) => res.ok ? res.json() : null)
+          .then((json) => {
+            if (json && json.data) {
+              setUserVisits(json.data);
+            }
+          })
+          .catch(() => {});
+      }
     }
   }, [user]);
 
@@ -115,10 +141,14 @@ function DetailPengunjungContent() {
 
   // Smart Cart State (uses inventory UUIDs from API)
   const [cartItems, setCartItems] = useState<
-    { id: string; name: string; qty: number; inventory_id: string }[]
+    { id: string; name: string; qty: number; inventory_id: string; photoFile?: File | null; photoName?: string | null; }[]
   >([]);
   const [selectedInventoryId, setSelectedInventoryId] = useState("");
+  const [manualName, setManualName] = useState("");
   const [itemQty, setItemQty] = useState("");
+  const [itemPhotoFile, setItemPhotoFile] = useState<File | null>(null);
+  const [itemPhotoName, setItemPhotoName] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Inventory items fetched from backend
   const [inventoryList, setInventoryList] = useState<InventoryItem[]>([]);
@@ -136,6 +166,30 @@ function DetailPengunjungContent() {
   const currentStep = formStep === "detail" ? 2 : 2;
 
   const handleNext = () => {
+    // Check for active visit on the same date (Max 1 session per day)
+    if (userVisits && scheduledDate) {
+      const pendingVisits = userVisits["PENDING"] || [];
+      const approvedVisits = userVisits["APPROVED"] || [];
+      const activeVisits = [...pendingVisits, ...approvedVisits];
+      
+      const hasActive = activeVisits.some((visit: any) => {
+        if (!visit.capacity || !visit.capacity.date) return false;
+        // Ensure date comparison matches YYYY-MM-DD
+        return visit.capacity.date.startsWith(scheduledDate) || scheduledDate.startsWith(visit.capacity.date.split("T")[0]);
+      });
+
+      if (hasActive) {
+        setErrorMessage("Anda sudah memiliki pengajuan kunjungan yang aktif pada tanggal ini. Maksimal 1 sesi per hari.");
+        return;
+      }
+    }
+
+    // Validate Lembaga & Proposal
+    if (identityType === "lembaga" && !proposalFile) {
+      setErrorMessage("Proposal / Surat Kunjungan wajib diunggah untuk lembaga.");
+      return;
+    }
+
     if (bringDonation && formStep === "detail") {
       setFormStep("cart");
     } else {
@@ -145,12 +199,6 @@ function DetailPengunjungContent() {
   };
 
   const handleSubmitToApi = async () => {
-    if (identityType === "lembaga" && !proposalFile) {
-      setErrorMessage("Proposal / Surat Kunjungan wajib diunggah untuk lembaga.");
-      setShowModal(false);
-      return;
-    }
-
     setIsLoading(true);
     setErrorMessage("");
     setShowModal(false);
@@ -160,6 +208,14 @@ function DetailPengunjungContent() {
     formData.append("bringsDonation", bringDonation ? "1" : "0");
     formData.append("visitor_type", identityType === "lembaga" ? "Lembaga/Instansi" : "Individu");
 
+    if (identityType === "lembaga") {
+      formData.append("visitor_name", namaField);
+    }
+
+    if (tujuanField.trim() !== "") {
+      formData.append("purpose", tujuanField.trim());
+    }
+
     if (identityType === "lembaga" && proposalFile) {
       formData.append("proposal_file", proposalFile);
     }
@@ -167,8 +223,16 @@ function DetailPengunjungContent() {
     if (bringDonation && cartItems.length > 0) {
       formData.append("donorPhone", whatsappField);
       cartItems.forEach((item, index) => {
-        formData.append(`items[${index}][inventory_id]`, item.inventory_id);
         formData.append(`items[${index}][qty]`, item.qty.toString());
+        if (item.inventory_id && item.inventory_id !== "MANUAL") {
+          formData.append(`items[${index}][inventory_id]`, item.inventory_id);
+        } else {
+          formData.append(`items[${index}][id]`, "MANUAL");
+          formData.append(`items[${index}][name]`, item.name);
+        }
+        if (item.photoFile) {
+          formData.append(`items[${index}][image]`, item.photoFile);
+        }
       });
     }
 
@@ -211,6 +275,7 @@ function DetailPengunjungContent() {
             ? "Melakukan Kegiatan"
             : "Kunjungan Biasa",
         has_donation: bringDonation ? "1" : "0",
+        email_sent: "true",
       });
       router.push(`/jadwal-kunjungan/konfirmasi?${confirmParams.toString()}`);
     } catch {
@@ -224,22 +289,59 @@ function DetailPengunjungContent() {
     if (selectedInventoryId && itemQty) {
       const parsedQty = parseInt(itemQty);
       if (isNaN(parsedQty) || parsedQty < 1) {
-        alert("Jumlah barang harus minimal 1.");
+        setAlertMessage("Jumlah barang harus minimal 1.");
+        setShowAlert(true);
         return;
       }
-      const inv = inventoryList.find((i) => i.id === selectedInventoryId);
-      if (!inv) return;
-      setCartItems([
-        ...cartItems,
-        {
-          id: `${Date.now()}`,
-          name: `${inv.itemName} (${inv.unit})`,
-          qty: parsedQty,
-          inventory_id: inv.id,
-        },
-      ]);
+      
+      if (selectedInventoryId === "MANUAL") {
+        if (!manualName.trim()) {
+          setAlertMessage("Nama barang manual wajib diisi.");
+          setShowAlert(true);
+          return;
+        }
+
+        const isExactMatch = inventoryList.some(
+          (inv) => inv.itemName.toLowerCase() === manualName.trim().toLowerCase()
+        );
+
+        if (isExactMatch) {
+          setAlertMessage(`Barang "${manualName.trim()}" sudah ada di dalam katalog. Silakan pilih dari menu katalog untuk mencegah data ganda.`);
+          setShowAlert(true);
+          return;
+        }
+
+        setCartItems([
+          ...cartItems,
+          {
+            id: `manual_${Date.now()}`,
+            name: manualName.trim(),
+            qty: parsedQty,
+            inventory_id: "MANUAL",
+            photoFile: itemPhotoFile,
+            photoName: itemPhotoName,
+          },
+        ]);
+      } else {
+        const inv = inventoryList.find((i) => i.id === selectedInventoryId);
+        if (!inv) return;
+        setCartItems([
+          ...cartItems,
+          {
+            id: `${Date.now()}`,
+            name: `${inv.itemName} (${inv.unit})`,
+            qty: parsedQty,
+            inventory_id: inv.id,
+            photoFile: itemPhotoFile,
+            photoName: itemPhotoName,
+          },
+        ]);
+      }
       setSelectedInventoryId("");
+      setManualName("");
       setItemQty("");
+      setItemPhotoFile(null);
+      setItemPhotoName(null);
     }
   };
 
@@ -252,7 +354,7 @@ function DetailPengunjungContent() {
       {/* ═══════════════════════════════════════
           STEPPER
          ═══════════════════════════════════════ */}
-      <section className="pt-8 pb-6 px-6">
+      <section className="pt-18 pb-6 px-6">
         <div className="max-w-xl mx-auto">
           <div className="flex items-center justify-center">
             {steps.map((step, idx) => (
@@ -505,11 +607,22 @@ function DetailPengunjungContent() {
              ═══════════════════════════════════════ */}
               {/* ── ERROR MESSAGE ── */}
               {errorMessage && (
-                <div className="mb-6 flex items-start gap-3 bg-red-50/80 rounded-xl px-5 py-4 animate-in fade-in duration-300">
-                  <FiAlertCircle className="text-red-500 text-base flex-shrink-0 mt-0.5" />
-                  <p className="font-sans text-sm text-red-600 leading-relaxed">
-                    {errorMessage}
-                  </p>
+                <div className="mb-6 flex flex-col gap-3 bg-red-50/80 rounded-xl px-5 py-4 animate-in fade-in duration-300">
+                  <div className="flex items-start gap-3">
+                    <FiAlertCircle className="text-red-500 text-base flex-shrink-0 mt-0.5" />
+                    <p className="font-sans text-sm text-red-600 leading-relaxed">
+                      {errorMessage}
+                    </p>
+                  </div>
+                  {errorMessage.includes("Maksimal 1 sesi per hari") && (
+                    <button 
+                      type="button"
+                      onClick={() => router.push("/jadwal-kunjungan")}
+                      className="text-sm font-bold text-red-700 bg-red-100 hover:bg-red-200 py-2 px-4 rounded-lg self-start transition-colors border-none"
+                    >
+                      Pilih Tanggal Lain
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -586,44 +699,97 @@ function DetailPengunjungContent() {
               </div>
 
               <GlassContainer className="p-6 mb-8">
-                <div className="flex gap-3 items-end">
-                  <div className="flex-1">
-                    <label className="text-xs font-public-sans font-bold uppercase tracking-widest text-on-surface-variant mb-2 block">
-                      Pilih Barang
-                    </label>
-                    <select
-                      value={selectedInventoryId}
-                      onChange={(e) => setSelectedInventoryId(e.target.value)}
-                      className="w-full px-4 py-3 bg-surface-container-lowest rounded-xl border border-outline-variant/15 focus:border-primary/40 focus:ring-0 font-sans text-sm text-on-surface outline-none appearance-none"
+                <div className="flex flex-col gap-4">
+                  <div className="flex gap-3 items-end">
+                    <div className="flex-1">
+                      <label className="text-xs font-public-sans font-bold uppercase tracking-widest text-on-surface-variant mb-2 block">
+                        Pilih Barang
+                      </label>
+                      <select
+                        value={selectedInventoryId}
+                        onChange={(e) => setSelectedInventoryId(e.target.value)}
+                        className="w-full px-4 py-3 bg-surface-container-lowest rounded-xl border border-outline-variant/15 focus:border-primary/40 focus:ring-0 font-sans text-sm text-on-surface outline-none appearance-none"
+                      >
+                        <option value="">— Pilih dari daftar kebutuhan —</option>
+                        {inventoryList.map((inv) => (
+                          <option key={inv.id} value={inv.id}>
+                            {inv.itemName} ({inv.unit}) — Stok: {inv.stock}
+                          </option>
+                        ))}
+                        <option value="MANUAL">— Barang Lain (Di Luar Katalog) —</option>
+                      </select>
+                    </div>
+                    
+                    {selectedInventoryId === "MANUAL" && (
+                      <div className="flex-1">
+                        <label className="text-xs font-public-sans font-bold uppercase tracking-widest text-on-surface-variant mb-2 block">
+                          Nama Barang
+                        </label>
+                        <input
+                          type="text"
+                          value={manualName}
+                          onChange={(e) => setManualName(e.target.value)}
+                          placeholder="Misal: Buku Cerita Anak"
+                          className="w-full px-4 py-3 bg-surface-container-lowest rounded-xl border border-outline-variant/15 focus:border-primary/40 focus:ring-0 font-sans text-sm text-on-surface outline-none"
+                        />
+                      </div>
+                    )}
+
+                    <div className="w-24">
+                      <label className="text-xs font-public-sans font-bold uppercase tracking-widest text-on-surface-variant mb-2 block">
+                        Jumlah
+                      </label>
+                      <input
+                        type="number"
+                        value={itemQty}
+                        onChange={(e) => setItemQty(e.target.value)}
+                        min={1}
+                        placeholder="1"
+                        className="w-full px-4 py-3 bg-surface-container-lowest rounded-xl border border-outline-variant/15 focus:border-primary/40 focus:ring-0 font-sans text-sm text-on-surface text-center outline-none"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3 items-end">
+                    <div className="flex-1">
+                      <label className="text-xs font-public-sans font-bold uppercase tracking-widest text-on-surface-variant mb-2 block">
+                        Upload Foto Barang (Opsional)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => photoInputRef.current?.click()}
+                        className="w-full px-4 py-3 bg-surface-container-lowest hover:bg-surface-container-low rounded-xl transition-colors border border-outline-variant/15 font-sans text-sm text-on-surface-variant flex items-center justify-between"
+                      >
+                        <span className="truncate">
+                          {itemPhotoName || "Pilih file foto..."}
+                        </span>
+                        <MdCloudUpload className="text-lg flex-shrink-0" />
+                      </button>
+                      <input
+                        ref={photoInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setItemPhotoFile(file);
+                            setItemPhotoName(file.name);
+                          } else {
+                            setItemPhotoFile(null);
+                            setItemPhotoName(null);
+                          }
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddToCart}
+                      className="h-[46px] px-6 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl font-bold flex items-center justify-center transition-colors shrink-0"
                     >
-                      <option value="">— Pilih dari daftar kebutuhan —</option>
-                      {inventoryList.map((inv) => (
-                        <option key={inv.id} value={inv.id}>
-                          {inv.itemName} ({inv.unit}) — Stok: {inv.stock}
-                        </option>
-                      ))}
-                    </select>
+                      <MdAddShoppingCart className="text-xl mr-2" /> Tambah
+                    </button>
                   </div>
-                  <div className="w-24">
-                    <label className="text-xs font-public-sans font-bold uppercase tracking-widest text-on-surface-variant mb-2 block">
-                      Jumlah
-                    </label>
-                    <input
-                      type="number"
-                      value={itemQty}
-                      onChange={(e) => setItemQty(e.target.value)}
-                      min={1}
-                      placeholder="1"
-                      className="w-full px-4 py-3 bg-surface-container-lowest rounded-xl border border-outline-variant/15 focus:border-primary/40 focus:ring-0 font-sans text-sm text-on-surface text-center outline-none"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleAddToCart}
-                    className="h-[46px] px-6 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl font-bold flex items-center justify-center transition-colors"
-                  >
-                    <MdAddShoppingCart className="text-xl" />
-                  </button>
                 </div>
 
                 <div className="mt-8 space-y-3">
@@ -675,8 +841,14 @@ function DetailPengunjungContent() {
             onClose={() => setShowModal(false)}
             onConfirm={handleSubmitToApi}
             confirmText={isLoading ? "Mengirim..." : "Ya, Ajukan Kunjungan"}
-            date={scheduledDate}
-            time={`Sesi ${sessionLabel} (${sessionTime})`}
+            summaryItems={[
+              { label: 'Tanggal', value: scheduledDate || '-' },
+              { label: 'Waktu', value: `Sesi ${sessionLabel} (${sessionTime})` },
+              ...(bringDonation ? [{ 
+                label: 'Status Donasi', 
+                value: `Membawa Barang (${cartItems.reduce((acc, item) => acc + item.qty, 0)} item)` 
+              }] : [])
+            ]}
           />
 
           {/* ═══════════════════════════════════════
@@ -687,13 +859,20 @@ function DetailPengunjungContent() {
               <FiShield className="text-primary text-base flex-shrink-0 mt-0.5" />
               <p className="font-sans text-xs text-on-surface-variant leading-relaxed">
                 Data Anda dienkripsi dan hanya digunakan untuk kepentingan
-                verifikasi kunjungan oleh Panti Asuhan Dr Lucas. Kami menghargai
+                verifikasi kunjungan oleh Panti Asuhan Dr. J. Lucas. Kami menghargai
                 privasi Anda sebagaimana kami menjaga kenyamanan anak-anak.
               </p>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={showAlert}
+        onClose={() => setShowAlert(false)}
+        message={alertMessage}
+      />
     </div>
   );
 }

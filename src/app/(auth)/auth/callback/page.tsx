@@ -1,18 +1,24 @@
 "use client";
 
 import { useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { MdLoop } from "react-icons/md";
 import { fetcher } from "@/lib/fetcher"; // Import fetcher untuk ambil data profil
 
 function AuthCallbackContent() {
-  const searchParams = useSearchParams();
   const router = useRouter();
-  const token = searchParams.get("token");
 
   useEffect(() => {
     async function handleAuth() {
+      // Extract token from URL fragment instead of query string
+      const hash = window.location.hash;
+      const match = hash.match(/#token=([^&]+)/);
+      const token = match ? decodeURIComponent(match[1]) : null;
+
       if (token) {
+        // Hapus token dari URL (meningkatkan keamanan, membersihkan fragment)
+        window.history.replaceState(null, "", window.location.pathname);
+
         // 1. Simpan token ke localStorage
         localStorage.setItem("auth_token", token);
 
@@ -45,7 +51,7 @@ function AuthCallbackContent() {
     }
 
     handleAuth();
-  }, [token, router]);
+  }, [router]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">

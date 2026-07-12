@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { GlassContainer } from "@/components/ui/GlassContainer";
 import { InputField } from "@/components/ui/InputField";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { AlertModal } from "@/components/ui/AlertModal";
 import imageCompression from "browser-image-compression";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -86,6 +87,9 @@ export default function DonasiBarangCheckoutPage() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [alertMessage, setAlertMessage] = useState("");
+  const [showAlert, setShowAlert] = useState(false);
 
   const handleImageCompression = async (file: File): Promise<File> => {
     try {
@@ -124,7 +128,7 @@ export default function DonasiBarangCheckoutPage() {
   const [catalogPhotoFile, setCatalogPhotoFile] = useState<File | null>(null);
 
   React.useEffect(() => {
-    if (activeTab === "KATALOG" && catalogNeeds.length === 0) {
+    if (catalogNeeds.length === 0) {
       setIsLoadingCatalog(true);
       fetch(
         `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/public/katalog-kebutuhan`,
@@ -139,7 +143,7 @@ export default function DonasiBarangCheckoutPage() {
         .finally(() => setIsLoadingCatalog(false));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, []);
 
   /* ───── HANDLERS ───── */
   const handleIdentityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -160,13 +164,25 @@ export default function DonasiBarangCheckoutPage() {
       !manualForm.item_category ||
       !manualForm.item_qty
     ) {
-      alert("Nama Barang, Kategori, dan Jumlah wajib diisi.");
+      setAlertMessage("Nama Barang, Kategori, dan Jumlah wajib diisi.");
+      setShowAlert(true);
+      return;
+    }
+
+    const isExactMatch = catalogNeeds.some(
+      (inv) => inv.itemName.toLowerCase() === manualForm.item_name.trim().toLowerCase()
+    );
+
+    if (isExactMatch) {
+      setAlertMessage(`Barang "${manualForm.item_name.trim()}" sudah ada di dalam katalog. Silakan pilih dari menu katalog untuk mencegah data ganda.`);
+      setShowAlert(true);
       return;
     }
 
     const parsedQty = parseInt(manualForm.item_qty);
     if (isNaN(parsedQty) || parsedQty < 1) {
-      alert("Jumlah barang harus minimal 1.");
+      setAlertMessage("Jumlah barang harus minimal 1.");
+      setShowAlert(true);
       return;
     }
 
@@ -203,13 +219,15 @@ export default function DonasiBarangCheckoutPage() {
 
   const handleAddCatalog = async () => {
     if (!selectedNeed || !catalogQty) {
-      alert("Silakan pilih barang dari katalog dan masukkan jumlahnya.");
+      setAlertMessage("Silakan pilih barang dari katalog dan masukkan jumlahnya.");
+      setShowAlert(true);
       return;
     }
 
     const parsedQty = parseInt(catalogQty);
     if (isNaN(parsedQty) || parsedQty < 1) {
-      alert("Jumlah donasi harus minimal 1.");
+      setAlertMessage("Jumlah donasi harus minimal 1.");
+      setShowAlert(true);
       return;
     }
 
@@ -275,30 +293,36 @@ export default function DonasiBarangCheckoutPage() {
   };
 
   const submitFinalDonation = async () => {
-    if (!identity.donor_name || !identity.donor_phone) {
-      alert(
-        "Mohon lengkapi Identitas Donatur (Nama & WhatsApp) sebelum checkout.",
-      );
+    if (!identity.donor_name || !identity.donor_phone || !identity.donor_email) {
+      setAlertMessage("Mohon lengkapi Identitas Donatur (Nama, WhatsApp, & Email) sebelum checkout.");
+      setShowAlert(true);
       setIsCheckoutOpen(false);
       return;
     }
     if (cartItems.length === 0) {
-      alert("Keranjang donasi masih kosong.");
+      setAlertMessage("Keranjang donasi masih kosong.");
+      setShowAlert(true);
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const payload = {
-        donorName: identity.donor_name,
-        donorPhone: identity.donor_phone,
-        items: cartItems.map((item) => ({
-          id: item.source === "KATALOG" ? item.id : "MANUAL",
-          name: item.item_name,
-          qty: parseInt(item.item_qty),
-        })),
-      };
+      const formData = new FormData();
+      formData.append("donorName", identity.donor_name);
+      formData.append("donorPhone", identity.donor_phone);
+      if (identity.donor_email) {
+        formData.append("donorEmail", identity.donor_email);
+      }
+
+      cartItems.forEach((item, index) => {
+        formData.append(`items[${index}][id]`, item.source === "KATALOG" ? item.id : "MANUAL");
+        formData.append(`items[${index}][name]`, item.item_name);
+        formData.append(`items[${index}][qty]`, item.item_qty.toString());
+        if (item.photoFile) {
+          formData.append(`items[${index}][image]`, item.photoFile);
+        }
+      });
 
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/public/donasi-barang`,
@@ -306,10 +330,11 @@ export default function DonasiBarangCheckoutPage() {
           method: "POST",
           credentials: "include",
           headers: {
-            "Content-Type": "application/json",
             Accept: "application/json",
+            // Do NOT set Content-Type to application/json or multipart/form-data manually!
+            // Browser sets it with the correct boundary for FormData automatically.
           },
-          body: JSON.stringify(payload),
+          body: formData,
         },
       );
 
@@ -317,7 +342,8 @@ export default function DonasiBarangCheckoutPage() {
 
       if (!res.ok) {
         if (res.status === 422 && data.errors?.items) {
-          alert(`Kapasitas Terbatas: ${data.errors.items[0]}`);
+          setAlertMessage(`Kapasitas Terbatas: ${data.errors.items[0]}`);
+          setShowAlert(true);
         } else {
           throw new Error(data.message || "Gagal memproses donasi.");
         }
@@ -326,9 +352,15 @@ export default function DonasiBarangCheckoutPage() {
 
       setCartItems([]);
       setIsCheckoutOpen(false);
-      router.push(`/donasi/lacak-donasi/${data.tracking_code}`);
+      
+      const redirectUrl = identity.donor_email 
+        ? `/donasi/lacak-donasi/${data.tracking_code}?emailSent=true`
+        : `/donasi/lacak-donasi/${data.tracking_code}`;
+        
+      router.push(redirectUrl);
     } catch (error: any) {
-      alert(error.message);
+      setAlertMessage(error.message);
+      setShowAlert(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -380,7 +412,7 @@ export default function DonasiBarangCheckoutPage() {
                 />
                 <InputField
                   id="donor_email"
-                  label="Alamat Email (Opsional)"
+                  label="Alamat Email *"
                   placeholder="nama@email.com"
                   type="email"
                   value={identity.donor_email}
@@ -845,6 +877,13 @@ export default function DonasiBarangCheckoutPage() {
           </div>
         </div>
       )}
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={showAlert}
+        onClose={() => setShowAlert(false)}
+        message={alertMessage}
+      />
     </div>
   );
 }

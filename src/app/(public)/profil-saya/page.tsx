@@ -66,7 +66,7 @@ export default function ProfilSayaPage() {
         defaultValues={{
           fullName: user.name,
           email: user.email,
-          phone: "", // Phone will be fetched from extended profile endpoint later
+          phone: user.phone || "",
         }}
       />
     </div>

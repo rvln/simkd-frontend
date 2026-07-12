@@ -59,6 +59,7 @@ function mapDonation(raw: any): ValidasiData {
     qty: item.qty,
     inventory_id: item.inventory_id,
     unit: item.inventory?.unit,
+    photo_url: item.photo_url,
   }));
 
   return {
@@ -269,7 +270,7 @@ export default function ValidasiDonasiPage() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Cari Nomor Resi atau Nama Donatur..."
+                  placeholder="Cari Nomor Resi, Nama Donatur, atau Nama Barang..."
                   className="w-full pl-11 pr-4 py-3 bg-white rounded-xl text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 shadow-sm border-none"
                 />
               </div>

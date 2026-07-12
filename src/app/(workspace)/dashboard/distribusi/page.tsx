@@ -19,6 +19,7 @@ export default function DistribusiPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTarget, setFilterTarget] = useState("");
   const [filterDate, setFilterDate] = useState("");
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
 
   const fetchDistributions = useCallback(async () => {
     setIsLoading(true);
@@ -52,7 +53,7 @@ export default function DistribusiPage() {
       item.target_recipient?.toLowerCase().includes(searchLower) ||
       item.inventory?.category?.toLowerCase().includes(searchLower);
 
-    const matchesDate = filterDate === "" || (item.distribution_date && item.distribution_date.startsWith(filterDate));
+    const matchesDate = filterDate === "" || (item.distributed_at && item.distributed_at.startsWith(filterDate));
 
     return matchesTarget && matchesSearch && matchesDate;
   });
@@ -160,7 +161,7 @@ export default function DistribusiPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               {filteredDistributions.map((item: any) => (
-                <div key={item.id} className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-all border border-gray-100 flex flex-col group">
+                <div key={item.id} onClick={() => setSelectedItem(item)} className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-all border border-gray-100 flex flex-col group cursor-pointer hover:-translate-y-1">
                   <div className="flex justify-between items-start mb-4">
                     <div className="bg-[#E6F4F1] text-[#0B648C] px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest">
                       {item.inventory?.category ?? "Umum"}
@@ -206,6 +207,61 @@ export default function DistribusiPage() {
           fetchDistributions();
         }}
       />
+
+      {/* Detail Modal */}
+      {selectedItem && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-in zoom-in-95">
+            <div className="p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <div className="bg-[#E6F4F1] text-[#0B648C] px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest w-fit mb-2">
+                    {selectedItem.inventory?.category ?? "Umum"}
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">{selectedItem.inventory?.itemName ?? "Unknown Item"}</h2>
+                </div>
+              </div>
+
+              <div className="space-y-4 my-6">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Jumlah Didistribusikan</p>
+                  <p className="text-gray-900 font-medium">{selectedItem.qty} {selectedItem.inventory?.unit ?? "Pcs"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Penerima / Target</p>
+                  <p className="text-gray-900 font-medium">{selectedItem.target_recipient}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Tanggal Distribusi</p>
+                  <p className="text-gray-900 font-medium">
+                    {selectedItem.distributed_at ? new Date(selectedItem.distributed_at).toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' }) : "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Didistribusikan Oleh</p>
+                  <p className="text-gray-900 font-medium flex items-center gap-2">
+                    <FiUser className="text-gray-400" />
+                    {selectedItem.distributed_by ?? "Sistem/Admin"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Catatan / Keterangan Audit</p>
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <p className="text-gray-700 text-sm italic">{selectedItem.notes || "Tidak ada catatan spesifik."}</p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedItem(null)}
+                className="w-full py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors border-none"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Action Button (FAB) - Mobile Only */}
       {!isPanelOpen && (

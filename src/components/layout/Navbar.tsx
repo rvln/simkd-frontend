@@ -50,18 +50,37 @@ export const Navbar = () => {
   // Server-authoritative auth state (replaces the old isLoggedIn mock)
   const { user, isLoading, isAuthenticated } = useAuth();
 
-  // Profile photo from localStorage
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
+  const [tickerMessages, setTickerMessages] = useState<string[]>([]);
 
   useEffect(() => {
-    const loadPhoto = () => {
-      const saved = localStorage.getItem("profile_photo");
-      setProfilePhotoUrl(saved);
+    setProfilePhotoUrl(user?.avatar || null);
+  }, [user]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setTickerMessages([]);
+      return;
+    }
+    const fetchTicker = async () => {
+      try {
+        const token = localStorage.getItem("auth_token");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/user/ticker-stats`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTickerMessages(data.messages || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch ticker stats", err);
+      }
     };
-    loadPhoto();
-    window.addEventListener("storage", loadPhoto);
-    return () => window.removeEventListener("storage", loadPhoto);
-  }, []);
+    
+    fetchTicker();
+    const interval = setInterval(fetchTicker, 15000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, user]);
 
   // Close on outside click
   useEffect(() => {
@@ -116,9 +135,9 @@ export const Navbar = () => {
     if (!user) return null;
     switch (user.role) {
       case "PENGURUS_PANTI":
-        return { href: "/dashboard", label: "Dashboard Panti" };
+        return { href: "/dashboard", label: "Dasbor Panti" };
       case "KEPALA_PANTI":
-        return { href: "/dashboard-kepala-panti", label: "Dashboard Panti" };
+        return { href: "/dashboard-kepala-panti", label: "Dasbor Panti" };
       default:
         return null; // PENGUNJUNG — no dashboard access
     }
@@ -127,12 +146,21 @@ export const Navbar = () => {
   const dashboardLink = getDashboardLink();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-surface/80 backdrop-blur-md border-b border-outline-variant/20 shadow-sm">
+    <>
+      {tickerMessages.length > 0 && (
+        <div className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-teal-800 to-teal-700 text-teal-50 text-xs py-2 px-4 flex items-center justify-center font-sans tracking-wide">
+          <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap text-ellipsis max-w-full">
+            <span className="font-bold flex-shrink-0">INFO:</span>
+            <span className="truncate">{tickerMessages.join(" • ")}</span>
+          </div>
+        </div>
+      )}
+      <nav className={`fixed left-0 right-0 z-50 bg-surface/80 backdrop-blur-md border-b border-outline-variant/20 shadow-sm transition-all duration-300 ${tickerMessages.length > 0 ? "top-8" : "top-0"}`}>
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2">
           <span className="font-sans font-black text-base text-primary tracking-tighter">
-            Panti Asuhan Dr Lucas
+            Panti Asuhan Dr. J. Lucas
           </span>
         </Link>
 
@@ -224,11 +252,20 @@ export const Navbar = () => {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={profilePhotoUrl}
-                        alt=""
+                        alt="Foto Profil"
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <FiUser className="text-lg" />
+                      <span className="text-sm font-bold text-teal-700">
+                        {user.name
+                          ? user.name
+                              .split(" ")
+                              .map((w) => w[0])
+                              .join("")
+                              .slice(0, 2)
+                              .toUpperCase()
+                          : "?"}
+                      </span>
                     )}
                   </div>
                   <span className="hidden md:block">
@@ -433,11 +470,20 @@ export const Navbar = () => {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={profilePhotoUrl}
-                      alt=""
+                      alt="Foto Profil"
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <FiUser className="text-lg" />
+                    <span className="text-base font-bold text-teal-700">
+                      {user.name
+                        ? user.name
+                            .split(" ")
+                            .map((w) => w[0])
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase()
+                        : "?"}
+                    </span>
                   )}
                 </div>
                 <div>
@@ -494,6 +540,7 @@ export const Navbar = () => {
           )}
         </div>
       </div>
-    </nav>
+      </nav>
+    </>
   );
 };

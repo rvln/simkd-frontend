@@ -5,7 +5,7 @@ import Image from "next/image";
 import { GlassContainer } from "@/components/ui/GlassContainer";
 import { InputField } from "@/components/ui/InputField";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
-import { FiShield, FiCheckCircle, FiLock, FiChevronDown } from "react-icons/fi";
+import { FiShield, FiCheckCircle, FiLock, FiChevronDown, FiAlertCircle } from "react-icons/fi";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
@@ -79,6 +79,7 @@ export default function DonasiFinansialPage() {
     "MIDTRANS",
   );
   const [paymentProof, setPaymentProof] = useState<File | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const effectiveAmount =
     selectedAmount ?? (customAmount ? parseInt(customAmount, 10) : 0);
@@ -114,6 +115,7 @@ export default function DonasiFinansialPage() {
   const handleSubmit = async () => {
     if (isLoading) return;
     setIsLoading(true);
+    setFormError(null);
 
     // Validasi sederhana
     if (
@@ -122,13 +124,13 @@ export default function DonasiFinansialPage() {
       !formData.donorPhone ||
       effectiveAmount <= 0
     ) {
-      alert("Mohon lengkapi semua data donasi.");
+      setFormError("Mohon lengkapi semua data donasi.");
       setIsLoading(false);
       return;
     }
 
     if (paymentChannel === "MANUAL" && !paymentProof) {
-      alert("Mohon unggah bukti transfer untuk metode pembayaran manual.");
+      setFormError("Mohon unggah bukti transfer untuk metode pembayaran manual.");
       setIsLoading(false);
       return;
     }
@@ -192,7 +194,7 @@ export default function DonasiFinansialPage() {
       }
     } catch (error: any) {
       console.error("Network error:", error);
-      alert(error.message || "Terjadi kesalahan jaringan. Silakan coba lagi.");
+      setFormError(error.message || "Terjadi kesalahan jaringan. Silakan coba lagi.");
       setIsLoading(false);
     }
   };
@@ -222,7 +224,7 @@ export default function DonasiFinansialPage() {
 
   const triggerSnap = (token: string, currentDonationId: string | null) => {
     if (!(window as any).snap) {
-      alert("Sistem pembayaran belum siap. Silakan refresh halaman.");
+      setFormError("Sistem pembayaran belum siap. Silakan refresh halaman.");
       return;
     }
     (window as any).snap.pay(token, {
@@ -238,7 +240,7 @@ export default function DonasiFinansialPage() {
         setPaymentState("PENDING_PAYMENT");
       },
       onError: () => {
-        alert("Transaksi gagal. Silakan coba lagi.");
+        setFormError("Transaksi gagal. Silakan coba lagi.");
         setPaymentState("IDLE");
         setSnapToken(null);
       },
@@ -281,7 +283,7 @@ export default function DonasiFinansialPage() {
                     <div className="flex items-center gap-2 mt-3">
                       <span className="w-5 h-px bg-black/50" />
                       <span className="font-public-sans text-[9px] font-bold uppercase tracking-[0.2em] text-black/70">
-                        Panti Asuhan Dr Lucas
+                        Panti Asuhan Dr. J. Lucas
                       </span>
                     </div>
                   </GlassContainer>
@@ -559,26 +561,48 @@ export default function DonasiFinansialPage() {
                             Bank BCA: 1234567890
                           </span>
                           <span className="block text-sm text-on-surface-variant">
-                            a.n. Panti Asuhan Dr. Lucas
+                            a.n. Panti Asuhan Dr. J. Lucas
                           </span>
                         </div>
                         <div>
                           <span className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">
                             Unggah Bukti Transfer
                           </span>
-                          <input
-                            type="file"
-                            accept="image/jpeg,image/png,image/jpg"
-                            onChange={(e) =>
-                              setPaymentProof(e.target.files?.[0] || null)
-                            }
-                            className="block w-full text-sm text-on-surface-variant file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-colors"
-                          />
+                          <div className="relative">
+                            <input
+                              type="file"
+                              id="payment-proof"
+                              accept="image/jpeg,image/png,image/jpg"
+                              onChange={(e) =>
+                                setPaymentProof(e.target.files?.[0] || null)
+                              }
+                              className="sr-only"
+                            />
+                            <label
+                              htmlFor="payment-proof"
+                              className="inline-flex items-center gap-3 cursor-pointer text-sm text-on-surface-variant font-medium group w-full"
+                            >
+                              <span className="py-2 px-4 rounded-full bg-primary/10 text-primary font-semibold group-hover:bg-primary/20 transition-colors shrink-0">
+                                Pilih Berkas
+                              </span>
+                              <span className="truncate">
+                                {paymentProof ? paymentProof.name : "Belum ada berkas"}
+                              </span>
+                            </label>
+                          </div>
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
+
+                {/* ── Error Message ── */}
+                {formError && (
+                  <div className="mb-4 p-4 bg-error/10 text-error rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                    <FiAlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm font-medium leading-relaxed">{formError}</span>
+                  </div>
+                )}
 
                 {/* ── Submit ── */}
                 <PrimaryButton
@@ -647,7 +671,7 @@ export default function DonasiFinansialPage() {
                   Terima Kasih!
                 </h2>
                 <p className="text-on-surface-variant">
-                  Donasi Anda telah berhasil kami terima.
+                  Donasi Anda telah berhasil kami terima. Tanda terima secara otomatis sedang dikirim ke email Anda.
                 </p>
                 <button
                   onClick={handleCancelTransaction}

@@ -10,8 +10,8 @@ import {
   FiRefreshCw,
   FiAlertTriangle,
   FiCalendar,
-  FiImage,
 } from "react-icons/fi";
+import { AlertModal } from "@/components/ui/AlertModal";
 import { useAuth } from "@/hooks/useAuth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -198,6 +198,9 @@ export default function ModerasiLaporanPage() {
   const [modalAction, setModalAction] = useState<"PUBLISHED" | "REJECTED">("PUBLISHED");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [alertMessage, setAlertMessage] = useState("");
+  const [showAlert, setShowAlert] = useState(false);
+
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchReports = useCallback(async () => {
     setIsLoading(true);
@@ -260,7 +263,8 @@ export default function ModerasiLaporanPage() {
       setModalReport(null);
       fetchReports();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Gagal memoderasi laporan.");
+      setAlertMessage(err instanceof Error ? err.message : "Gagal memoderasi laporan.");
+      setShowAlert(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -428,6 +432,12 @@ export default function ModerasiLaporanPage() {
           ))
         )}
       </div>
+
+      <AlertModal
+        isOpen={showAlert}
+        onClose={() => setShowAlert(false)}
+        message={alertMessage}
+      />
 
       {/* Pagination */}
       {meta && meta.last_page > 1 && (

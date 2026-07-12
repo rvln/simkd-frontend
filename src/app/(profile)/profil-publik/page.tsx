@@ -109,6 +109,13 @@ const SLOT_LABELS: Record<string, string> = {
   NIGHT: "19:00 – 20:00 WITA",
 };
 
+const SLOT_NAMES: Record<string, string> = {
+  MORNING: "Pagi",
+  AFTERNOON: "Siang",
+  EVENING: "Sore",
+  NIGHT: "Malam",
+};
+
 /* ── Status Badge Config ── */
 const VISIT_STATUS_MAP: Record<
   string,
@@ -144,7 +151,7 @@ const VISIT_STATUS_MAP: Record<
     Icon: MdSchedule,
   },
   COMPLETED: {
-    label: "Selesai",
+    label: "Berhasil",
     bg: "bg-teal-50",
     text: "text-teal-700",
     Icon: MdCheckCircle,
@@ -268,6 +275,7 @@ export default function ProfilPublikPage() {
   const [donations, setDonations] = useState<ApiDonation[]>([]);
   const [groupedVisits, setGroupedVisits] = useState<GroupedVisits>({});
   const [capacities, setCapacities] = useState<ApiCapacity[]>([]);
+  const [upcomingVisits, setUpcomingVisits] = useState<any[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isResumingPayment, setIsResumingPayment] = useState<string | null>(null);
 
@@ -279,6 +287,8 @@ export default function ProfilPublikPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<ApiCapacity | null>(null);
   const [isSubmittingReschedule, setIsSubmittingReschedule] = useState(false);
+  const [rescheduleSubmitError, setRescheduleSubmitError] = useState("");
+  const [rescheduleSubmitSuccess, setRescheduleSubmitSuccess] = useState(false);
 
   /* ── Report Form State ── */
   const [reportVisitId, setReportVisitId] = useState("");
@@ -318,11 +328,15 @@ export default function ProfilPublikPage() {
       fetch(`${API_BASE}/api/capacities`, {
         headers: { Accept: "application/json" },
       }).then((r) => (r.ok ? r.json() : { data: [] })),
+      fetch(`${API_BASE}/api/public/kunjungan/upcoming`, {
+        headers: { Accept: "application/json" },
+      }).then((r) => (r.ok ? r.json() : { data: [] })),
     ])
-      .then(([visitsJson, donationsJson, capsJson]) => {
+      .then(([visitsJson, donationsJson, capsJson, upcomingJson]) => {
         setGroupedVisits(visitsJson.data || {});
         setDonations(donationsJson.data || []);
         setCapacities(capsJson.data || []);
+        setUpcomingVisits(upcomingJson.data || []);
       })
       .catch(() => {})
       .finally(() => setIsLoadingData(false));
@@ -330,13 +344,15 @@ export default function ProfilPublikPage() {
 
   useEffect(() => {
     fetchProfileData();
-
-    // Load saved profile photo from localStorage
-    const savedPhoto = localStorage.getItem("profile_photo");
-    if (savedPhoto) {
-      setProfilePhotoUrl(savedPhoto);
-    }
   }, []);
+
+  useEffect(() => {
+    if (user?.avatar) {
+      setProfilePhotoUrl(user.avatar);
+    } else {
+      setProfilePhotoUrl(null);
+    }
+  }, [user]);
 
   /* ── Derived metrics ── */
   const allVisits = useMemo(
@@ -392,6 +408,9 @@ export default function ProfilPublikPage() {
     if (!activeRescheduleVisit || !selectedSlot) return;
 
     setIsSubmittingReschedule(true);
+    setRescheduleSubmitError("");
+    setRescheduleSubmitSuccess(false);
+    
     const payload = {
       new_capacity_id: selectedSlot.id,
     };
@@ -415,12 +434,18 @@ export default function ProfilPublikPage() {
       if (!res.ok)
         throw new Error(data.message || "Gagal melakukan reschedule");
 
-      alert("Reschedule berhasil diajukan!");
-      setActiveRescheduleVisit(null);
+      setRescheduleSubmitSuccess(true);
       fetchProfileData();
-      setActiveTab("RIWAYAT_KUNJUNGAN");
+      
+      // Auto-close success message after 3 seconds
+      setTimeout(() => {
+        setRescheduleSubmitSuccess(false);
+        setActiveRescheduleVisit(null);
+        setActiveTab("RIWAYAT_KUNJUNGAN");
+      }, 3000);
+      
     } catch (err: any) {
-      alert(err.message);
+      setRescheduleSubmitError(err.message || "Terjadi kesalahan pada sistem.");
     } finally {
       setIsSubmittingReschedule(false);
     }
@@ -529,14 +554,109 @@ export default function ProfilPublikPage() {
       return capacities.some((c) => {
         const d = new Date(c.date);
         const localStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-        return (
-          localStr === dateStr &&
-          c.booked < c.quota &&
-          allowedSlots.includes(c.slot)
-        );
+        return localStr === dateStr && c.is_active && allowedSlots.includes(c.slot);
       });
     },
     [capacities],
+  );
+
+  const approvedVisits = useMemo(
+    () => upcomingVisits.filter((v: any) => v.status === "APPROVED"),
+    [upcomingVisits],
+  );
+
+  const dateHasVisit = useCallback(
+    (date: Date): boolean => {
+      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+      return approvedVisits.some((v: any) => v.visit_date === dateStr);
+    },
+    [approvedVisits],
+  );
+
+  const renderDateTooltip = useCallback(
+    (date: Date, isSelected: boolean, colIndex: number) => {
+      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+      
+      const day = date.getDay();
+      const isWeekend = day === 0 || day === 6;
+      const allowedSlots = isWeekend
+        ? ["MORNING", "AFTERNOON", "EVENING"]
+        : ["AFTERNOON", "EVENING"];
+
+      const dayCapacities = capacities.filter((c) => {
+        const d = new Date(c.date);
+        const localStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        return localStr === dateStr && c.is_active && allowedSlots.includes(c.slot);
+      });
+
+      const dayVisits = approvedVisits.filter((v: any) => v.visit_date === dateStr);
+
+      if (dayCapacities.length === 0 && dayVisits.length === 0) return null;
+
+      const isLeftEdge = colIndex <= 1;
+      const isRightEdge = colIndex >= 5;
+
+      const posClass = isLeftEdge
+        ? "left-0"
+        : isRightEdge
+          ? "right-0"
+          : "left-1/2 -translate-x-1/2";
+
+      const arrowClass = isLeftEdge
+        ? "left-6"
+        : isRightEdge
+          ? "right-6"
+          : "left-1/2 -translate-x-1/2";
+
+      return (
+        <div className={`absolute bottom-full ${posClass} mb-3 w-[240px] max-w-[85vw] p-3 bg-white border border-gray-100 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] transition-all duration-200 z-[60] pointer-events-none text-left ${isSelected ? "opacity-100 visible" : "opacity-0 invisible group-hover:opacity-100 group-hover:visible"}`}>
+          {dayCapacities.length > 0 && (
+            <div className="mb-3 last:mb-0">
+              <p className="text-[10px] font-bold text-teal-700 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
+                Tersedia
+              </p>
+              <ul className="space-y-1.5">
+                {dayCapacities.map((c, idx) => {
+                  const label = SLOT_NAMES[c.slot] || c.slot;
+                  const remain = c.quota - c.booked;
+                  return (
+                    <li key={`cap-${idx}`} className="flex justify-between items-center text-xs">
+                      <span className="text-gray-600 font-medium">{label}</span>
+                      <span className={`font-bold px-1.5 py-0.5 rounded-md text-[10px] ${remain === 0 ? 'bg-red-50 text-red-600' : 'bg-teal-50 text-teal-700'}`}>{remain} pax</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+          
+          {dayVisits.length > 0 && (
+            <div className="mb-3 last:mb-0 pt-2 border-t border-gray-100">
+              <p className="text-[10px] font-bold text-blue-700 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-md bg-blue-500"></span>
+                Booking
+              </p>
+              <ul className="space-y-2">
+                {dayVisits.map((v: any, idx: number) => {
+                  const label = SLOT_NAMES[v.slot] || v.slot;
+                  return (
+                    <li key={`vis-${idx}`} className="flex flex-col gap-0.5">
+                      <span className="text-xs font-bold text-gray-800">{label}</span>
+                      <span className="text-[10px] text-gray-500 truncate leading-tight">Oleh: {v.visitor_name}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+          
+          {/* Arrow */}
+          <div className={`absolute top-full ${arrowClass} border-[6px] border-transparent border-t-white`} />
+        </div>
+      );
+    },
+    [capacities, approvedVisits]
   );
 
   const getAvailableSlots = (date: Date) => {
@@ -558,11 +678,17 @@ export default function ProfilPublikPage() {
     });
   };
 
+  const visitsForSelectedDate = useMemo(() => {
+    if (!selectedDate) return [];
+    const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
+    return approvedVisits.filter((v: any) => v.visit_date === dateStr);
+  }, [selectedDate, approvedVisits]);
+
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<ProfileFormData>({
     defaultValues: {
       fullName: user?.name ?? "",
@@ -586,7 +712,7 @@ export default function ProfilPublikPage() {
     }
   }, [user, reset]);
 
-  const handleProfilePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfilePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -597,15 +723,28 @@ export default function ProfilPublikPage() {
     }
 
     setProfilePhotoFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = reader.result as string;
-      setProfilePhotoUrl(dataUrl);
-      localStorage.setItem("profile_photo", dataUrl);
-      // Dispatch storage event so Navbar can pick up the change in real-time
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    try {
+      const token = localStorage.getItem("auth_token");
+      const res = await fetch(`${API_BASE}/api/user/avatar`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Gagal mengunggah foto profil");
+
+      const data = await res.json();
+      setProfilePhotoUrl(data.avatar);
       window.dispatchEvent(new Event("storage"));
-    };
-    reader.readAsDataURL(file);
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
   const onSubmit = async (data: ProfileFormData) => {
@@ -745,6 +884,7 @@ export default function ProfilPublikPage() {
     icon: Icon,
     iconBg,
     iconColor,
+    itemNotes,
   }: any) => (
     <div className="bg-white/40 backdrop-blur-md p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.05)] border-0 hover:bg-white/60 transition-colors">
       <div className="flex items-center gap-4">
@@ -778,6 +918,20 @@ export default function ProfilPublikPage() {
               </span>
             )}
           </div>
+          {itemNotes && itemNotes.length > 0 && (
+            <div className="mt-3 p-3 bg-teal-50/50 rounded-lg border border-teal-100">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-teal-600 mb-1">
+                Barang Bawaan:
+              </p>
+              <ul className="list-disc list-inside text-xs text-teal-800 space-y-0.5">
+                {itemNotes.map((item: any, idx: number) => (
+                  <li key={idx}>
+                    {item.itemName_snapshot} ({item.qty})
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
       <div>{statusBadge}</div>
@@ -1022,22 +1176,39 @@ export default function ProfilPublikPage() {
                     </div>
                   )}
 
-                  <div className="pt-4">
-                    <button
-                      type="submit"
-                      disabled={isSaving}
-                      className="px-8 py-3.5 bg-teal-700 text-white font-bold rounded-xl shadow-[0_4px_14px_rgba(15,118,110,0.3)] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      {isSaving ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Menyimpan...
-                        </>
-                      ) : (
-                        "Simpan Perubahan"
-                      )}
-                    </button>
-                  </div>
+                  {isDirty && (
+                    <div className="pt-4 flex items-center justify-end gap-4">
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          if (user) {
+                            reset({
+                              fullName: user.name ?? "",
+                              email: user.email ?? "",
+                              phone: (user as any).phone ?? "",
+                            });
+                          }
+                        }}
+                        className="px-6 py-3.5 bg-transparent text-gray-500 font-bold text-sm rounded-xl hover:bg-gray-50 transition-colors border-none"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSaving}
+                        className="px-8 py-3.5 bg-teal-700 text-white font-bold rounded-xl shadow-[0_4px_14px_rgba(15,118,110,0.3)] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {isSaving ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Menyimpan...
+                          </>
+                        ) : (
+                          "Simpan Perubahan"
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </form>
               </div>
             )}
@@ -1144,7 +1315,7 @@ export default function ProfilPublikPage() {
                         key={visit.id}
                         title={
                           visit.capacity
-                            ? `Sesi ${visit.capacity.slot}`
+                            ? `Sesi ${SLOT_NAMES[visit.capacity.slot] || visit.capacity.slot}`
                             : "Kunjungan"
                         }
                         subtitleTop="Pengajuan Kunjungan"
@@ -1163,6 +1334,7 @@ export default function ProfilPublikPage() {
                         icon={MdGroups}
                         iconBg="bg-purple-100/50"
                         iconColor="text-purple-600"
+                        itemNotes={visit.donation?.item_donations}
                       />
                     ))
                   )}
@@ -1195,7 +1367,7 @@ export default function ProfilPublikPage() {
                               </p>
                               <h3 className="font-bold text-gray-900">
                                 {visit.capacity
-                                  ? `Sesi ${visit.capacity.slot}`
+                                  ? `Sesi ${SLOT_NAMES[visit.capacity.slot] || visit.capacity.slot}`
                                   : "Kunjungan"}
                               </h3>
                               <p className="text-xs text-gray-500 mt-0.5">
@@ -1307,25 +1479,82 @@ export default function ProfilPublikPage() {
                                 selectedDate?.getTime() ===
                                 dayObj.fullDate.getTime();
                               const hasSlot = dateHasCapacity(dayObj.fullDate);
+                              const hasVisit = dateHasVisit(dayObj.fullDate);
+                              
                               return (
-                                <button
-                                  key={i}
-                                  onClick={() => {
-                                    if (hasSlot) {
-                                      setSelectedDate(dayObj.fullDate);
-                                      setSelectedSlot(null);
-                                    }
-                                  }}
-                                  disabled={!hasSlot}
-                                  className={`aspect-square flex flex-col items-center justify-center rounded-xl md:rounded-2xl text-sm md:text-base font-medium transition-all ${!isCurrentMonth ? "text-gray-300 opacity-50" : ""} ${isSelected ? "bg-teal-700 text-white shadow-lg shadow-teal-700/30 font-bold" : hasSlot ? "bg-teal-50 text-teal-800 hover:bg-teal-100 cursor-pointer" : "bg-gray-50 text-gray-400 cursor-not-allowed"}`}
-                                >
-                                  {dayObj.date}
-                                </button>
+                                <div key={i} className="relative group flex justify-center">
+                                  <button
+                                    onClick={() => {
+                                      if (hasSlot) {
+                                        setSelectedDate(dayObj.fullDate);
+                                        setSelectedSlot(null);
+                                      }
+                                    }}
+                                    disabled={!hasSlot}
+                                    className={`
+                                      aspect-square w-full flex flex-col items-center justify-center rounded-xl md:rounded-2xl text-sm md:text-base font-medium transition-all
+                                      ${!isCurrentMonth ? "text-gray-300 opacity-50" : ""}
+                                      ${isSelected && hasVisit
+                                        ? "ring-4 ring-teal-700/30 bg-teal-700 text-white font-bold shadow-lg"
+                                        : hasVisit
+                                          ? "bg-teal-700 text-white font-bold shadow-md cursor-pointer"
+                                          : isSelected
+                                            ? "ring-2 ring-teal-700 bg-teal-50 text-teal-800 font-bold"
+                                            : hasSlot
+                                              ? "bg-teal-50 text-teal-800 hover:bg-teal-100 cursor-pointer"
+                                              : "bg-gray-50 text-gray-400 cursor-not-allowed"
+                                      }
+                                    `}
+                                  >
+                                    {dayObj.date}
+                                    {hasSlot && !hasVisit && isCurrentMonth && (
+                                      <span className="absolute bottom-1.5 md:bottom-2 w-1 h-1 rounded-full bg-teal-700" />
+                                    )}
+                                  </button>
+                                  {isCurrentMonth && renderDateTooltip(dayObj.fullDate, isSelected, i % 7)}
+                                </div>
                               );
                             })}
                           </div>
+
+                          {/* Legend Kalender */}
+                          <div className="flex items-center justify-center gap-6 mt-6 pt-4 border-t border-gray-100">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-teal-700" />
+                              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                                Tersedia
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-md bg-teal-700" />
+                              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                                Reservasi/Booking
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
+
+                      {/* Static Booking Info for Mobile (Visible when date is selected) */}
+                      {selectedDate && visitsForSelectedDate.length > 0 && (
+                        <div className="animate-in fade-in slide-in-from-top-2 mb-6 p-4 md:p-5 bg-white border border-gray-100 rounded-2xl shadow-sm lg:hidden">
+                          <p className="text-xs font-bold text-blue-700 uppercase tracking-widest mb-3 flex items-center gap-1.5 border-b border-gray-100 pb-2">
+                            <span className="w-1.5 h-1.5 rounded-md bg-blue-500"></span>
+                            Daftar Sesi Terbooking
+                          </p>
+                          <ul className="space-y-3">
+                            {visitsForSelectedDate.map((v: any, idx: number) => {
+                              const label = SLOT_NAMES[v.slot] || v.slot;
+                              return (
+                                <li key={`mobile-vis-${idx}`} className="flex flex-col gap-1">
+                                  <span className="text-sm font-bold text-gray-800">{label}</span>
+                                  <span className="text-xs text-gray-500 font-medium">Oleh: <span className="text-gray-700">{v.visitor_name}</span></span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      )}
 
                       {/* Slot Selection */}
                       {selectedDate && (
@@ -1364,20 +1593,36 @@ export default function ProfilPublikPage() {
                       )}
 
                       {/* Submit */}
-                      <button
-                        onClick={handleReSubmit}
-                        disabled={!selectedSlot || isSubmittingReschedule}
-                        className="mt-6 w-full py-4 bg-teal-700 text-white font-bold rounded-xl shadow-lg hover:bg-teal-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex justify-center items-center gap-2"
-                      >
-                        {isSubmittingReschedule ? (
-                          <>
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            Menyimpan Jadwal...
-                          </>
-                        ) : (
-                          "Konfirmasi Reschedule"
-                        )}
-                      </button>
+                      {rescheduleSubmitError && (
+                        <div className="mt-4 p-4 bg-red-50 text-red-700 text-sm font-bold rounded-xl border border-red-200">
+                          {rescheduleSubmitError}
+                        </div>
+                      )}
+                      
+                      {rescheduleSubmitSuccess ? (
+                        <div className="mt-6 p-6 bg-teal-50 border border-teal-200 rounded-2xl flex items-center justify-center gap-3 text-teal-800">
+                          <FiCheck className="text-2xl" />
+                          <div>
+                            <p className="font-bold">Reschedule Berhasil!</p>
+                            <p className="text-xs">Jadwal kunjungan baru telah dikonfirmasi.</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleReSubmit}
+                          disabled={!selectedSlot || isSubmittingReschedule}
+                          className="mt-6 w-full py-4 bg-teal-700 text-white font-bold rounded-xl shadow-lg hover:bg-teal-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex justify-center items-center gap-2"
+                        >
+                          {isSubmittingReschedule ? (
+                            <>
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Menyimpan Jadwal...
+                            </>
+                          ) : (
+                            "Konfirmasi Reschedule"
+                          )}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1423,7 +1668,7 @@ export default function ProfilPublikPage() {
                         >
                           <option value="">
                             {completedVisits.length === 0
-                              ? "Tidak ada kunjungan selesai yang dapat dilaporkan"
+                              ? "Tidak ada kunjungan berhasil yang dapat dilaporkan"
                               : "Pilih kunjungan..."}
                           </option>
                           {completedVisits.map((visit) => (

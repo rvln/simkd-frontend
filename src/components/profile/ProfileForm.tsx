@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { 
   MdOutlinePerson, 
@@ -11,6 +11,9 @@ import {
   MdOutlineDelete,
   MdArrowBack
 } from "react-icons/md";
+import { FiCamera } from "react-icons/fi";
+import { useAuth } from "@/hooks/useAuth";
+import LogoutButton from "@/components/layout/LogoutButton";
 import { useRouter } from "next/navigation";
 
 export interface ProfileFormData {
@@ -25,15 +28,59 @@ export interface ProfileFormProps {
 }
 
 export default function ProfileForm({ roleLabel, defaultValues }: ProfileFormProps) {
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<ProfileFormData>({
+  const { register, handleSubmit, watch, formState: { errors, isDirty }, reset } = useForm<ProfileFormData>({
     defaultValues
   });
   const router = useRouter();
 
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const { user, refetch } = useAuth();
 
-  const onSubmit = (data: ProfileFormData) => {
-    alert(`Profil ${roleLabel} diperbarui:\n` + JSON.stringify(data, null, 2));
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar || null);
+
+  useEffect(() => {
+    setAvatarUrl(user?.avatar || null);
+  }, [user?.avatar]);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const hasChanges = isDirty;
+
+  const onSubmit = async (data: ProfileFormData) => {
+    setIsSubmitting(true);
+    setSuccessMessage(null);
+    try {
+      const token = localStorage.getItem("auth_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/user/profile`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "ngrok-skip-browser-warning": "true",
+        },
+        body: JSON.stringify({ name: data.fullName, phone: data.phone }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Gagal memperbarui profil");
+      }
+
+      const resData = await res.json();
+      setSuccessMessage(resData.message || "Profil berhasil diperbarui!");
+      
+      reset({ fullName: data.fullName, email: data.email, phone: data.phone });
+      
+      await refetch();
+      setTimeout(() => {
+        router.refresh();
+      }, 1500);
+    } catch (e: any) {
+      alert(e.message || "Gagal memperbarui profil.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const currentFullName = watch("fullName");
@@ -102,9 +149,63 @@ export default function ProfileForm({ roleLabel, defaultValues }: ProfileFormPro
                   <label className="cursor-pointer flex items-center gap-2 px-5 py-2.5 bg-teal-50 text-teal-700 text-sm font-bold rounded-xl shadow-sm hover:bg-teal-100 transition-colors border-none">
                     <MdOutlineFileUpload className="text-lg" />
                     Unggah Baru
-                    <input type="file" className="hidden" accept="image/*" />
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      accept="image/jpeg, image/png, image/jpg, image/webp" 
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 2 * 1024 * 1024) {
+                          alert("Ukuran file maksimal 2MB");
+                          return;
+                        }
+
+                        const formData = new FormData();
+                        formData.append("avatar", file);
+
+                        try {
+                          const token = localStorage.getItem("auth_token");
+                          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/user/avatar`, {
+                            method: "POST",
+                            headers: {
+                              Authorization: `Bearer ${token}`,
+                              Accept: "application/json",
+                            },
+                            body: formData,
+                          });
+                          
+                          if (!res.ok) throw new Error("Gagal mengunggah foto profil");
+                          
+                          const data = await res.json();
+                          setAvatarUrl(data.avatar);
+                          await refetch();
+                        } catch (err: any) {
+                          alert(err.message);
+                        }
+                      }}
+                    />
                   </label>
-                  <button type="button" className="flex items-center gap-2 px-5 py-2.5 bg-slate-50 text-red-600 text-sm font-bold rounded-xl shadow-sm hover:bg-red-50 transition-colors border-none">
+                  <button 
+                    type="button" 
+                    onClick={async () => {
+                      try {
+                        const token = localStorage.getItem("auth_token");
+                        await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/user/avatar`, {
+                          method: "DELETE",
+                          headers: {
+                            Authorization: `Bearer ${token}`,
+                            Accept: "application/json",
+                          },
+                        });
+                        setAvatarUrl(null);
+                        await refetch();
+                      } catch (err) {
+                        console.error(err);
+                      }
+                    }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-slate-50 text-red-600 text-sm font-bold rounded-xl shadow-sm hover:bg-red-50 transition-colors border-none"
+                  >
                     <MdOutlineDelete className="text-lg" />
                     Hapus
                   </button>
@@ -165,23 +266,44 @@ export default function ProfileForm({ roleLabel, defaultValues }: ProfileFormPro
             
           </div>
 
-          {/* Ubah Password Link */}
-          <div className="pt-2 pb-6 border-b border-gray-100/50">
+          {/* Ubah Password Link & Logout */}
+          <div className="pt-2 pb-6 border-b border-gray-100/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <button type="button" className="flex items-center gap-2 text-sm font-bold text-teal-700 hover:text-teal-800 transition-colors">
               <MdLockOutline className="text-lg" />
               Ubah Password Akses
             </button>
+            <div className="w-full sm:w-auto">
+              <LogoutButton />
+            </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-4 pt-2">
-            <button type="button" className="px-6 py-3 bg-transparent text-gray-500 font-bold text-sm rounded-xl hover:bg-gray-50 transition-colors border-none">
-              Batal
-            </button>
-            <button type="submit" className="px-8 py-3 bg-teal-700 text-white font-bold text-sm rounded-xl shadow-[0_4px_14px_rgba(15,118,110,0.3)] hover:-translate-y-0.5 transition-all border-none">
-              Simpan Perubahan
-            </button>
-          </div>
+          {hasChanges && (
+            <div className="flex items-center justify-end gap-4 pt-2">
+              {successMessage && (
+                <span className="text-sm font-medium text-emerald-600 mr-2 animate-fade-in">
+                  {successMessage}
+                </span>
+              )}
+              <button 
+                type="button" 
+                onClick={() => {
+                  reset(defaultValues);
+                  setAvatarUrl(initialAvatarUrl);
+                }}
+                className="px-6 py-3 bg-transparent text-gray-500 font-bold text-sm rounded-xl hover:bg-gray-50 transition-colors border-none"
+              >
+                Batal
+              </button>
+              <button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="px-8 py-3 bg-teal-700 text-white font-bold text-sm rounded-xl shadow-[0_4px_14px_rgba(15,118,110,0.3)] hover:-translate-y-0.5 transition-all border-none disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                {isSubmitting ? "Menyimpan..." : "Simpan Perubahan"}
+              </button>
+            </div>
+          )}
 
         </form>
       </div>

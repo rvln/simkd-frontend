@@ -81,7 +81,17 @@ const translateSubtitle = (subtitle: string) => {
   if (!subtitle) return subtitle;
   return subtitle
     .replace(/PENDING_DELIVERY/g, "MENUNGGU PENGIRIMAN")
-    .replace(/PENDING/g, "MENUNGGU PERSETUJUAN");
+    .replace(/PENDING/g, "MENUNGGU PERSETUJUAN")
+    .replace(/NEEDS_RESCHEDULE/g, "PERLU DIUBAH JADWAL")
+    .replace(/APPROVED/g, "DITERIMA")
+    .replace(/REJECTED/g, "DITOLAK")
+    .replace(/NO_SHOW/g, "TIDAK HADIR")
+    .replace(/EXPIRED/g, "KEDALUWARSA")
+    .replace(/SUCCESS/g, "BERHASIL")
+    .replace(/COMPLETED/g, "BERHASIL")
+    .replace(/DELIVERED/g, "TERKIRIM")
+    .replace(/FAILED/g, "GAGAL")
+    .replace(/CANCELLED/g, "DIBATALKAN");
 };
 
 const translateTimeDiff = (timeDiff: string) => {
@@ -227,7 +237,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
 
-                    <div className="space-y-4 flex-1">
+                    <div className="space-y-4 flex-1 max-h-[340px] overflow-y-auto pr-2">
                       {data.todays_agenda.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-10 text-gray-400 bg-slate-50 rounded-2xl border border-dashed border-gray-200">
                           <MdOutlineCalendarToday className="text-4xl mb-3 text-gray-300" />
@@ -260,7 +270,6 @@ export default function DashboardPage() {
                                 Kunjungan Tervalidasi
                               </p>
                             </div>
-                            <MdOutlineChevronRight className="text-outline-variant group-hover:text-primary transition-colors text-2xl" />
                           </div>
                         ))
                       )}
@@ -275,7 +284,7 @@ export default function DashboardPage() {
                       Log Aktivitas
                     </h3>
 
-                    <div className="relative flex-1">
+                    <div className="relative flex-1 max-h-[340px] overflow-y-auto pr-2">
                       {/* Timeline line */}
                       <div className="absolute left-3.5 top-0 bottom-0 w-[2px] bg-outline-variant/20"></div>
 
@@ -292,28 +301,28 @@ export default function DashboardPage() {
                                 key={`${log.id}-${idx}`}
                                 className="flex gap-6 items-start relative"
                               >
-                                  <div
-                                    className={`w-7 h-7 rounded-full flex items-center justify-center text-white ring-4 ring-surface-container-lowest z-10 flex-shrink-0 ${isDonation ? "bg-tertiary" : "bg-primary"}`}
+                                <div
+                                  className={`w-7 h-7 rounded-full flex items-center justify-center text-white ring-4 ring-surface-container-lowest z-10 flex-shrink-0 ${isDonation ? "bg-tertiary" : "bg-primary"}`}
+                                >
+                                  {isDonation ? (
+                                    <MdOutlineVolunteerActivism className="text-[14px]" />
+                                  ) : (
+                                    <MdOutlineGroup className="text-[14px]" />
+                                  )}
+                                </div>
+                                <div className="flex-1 pt-1">
+                                  <p className="font-bold text-sm text-on-surface font-sans">
+                                    {log.title}
+                                  </p>
+                                  <p
+                                    className={`font-public-sans text-xs font-bold uppercase tracking-widest mt-1 ${isDonation ? "text-tertiary" : "text-primary"}`}
                                   >
-                                    {isDonation ? (
-                                      <MdOutlineVolunteerActivism className="text-[14px]" />
-                                    ) : (
-                                      <MdOutlineGroup className="text-[14px]" />
-                                    )}
-                                  </div>
-                                  <div className="flex-1 pt-1">
-                                    <p className="font-bold text-sm text-on-surface font-sans">
-                                      {log.title}
-                                    </p>
-                                    <p
-                                      className={`font-public-sans text-xs font-bold uppercase tracking-widest mt-1 ${isDonation ? "text-tertiary" : "text-primary"}`}
-                                    >
-                                      {translateSubtitle(log.subtitle)}
-                                    </p>
-                                    <span className="text-[10px] text-on-surface-variant uppercase font-public-sans mt-2 block">
-                                      {translateTimeDiff(log.time_diff)}
-                                    </span>
-                                  </div>
+                                    {translateSubtitle(log.subtitle)}
+                                  </p>
+                                  <span className="text-[10px] text-on-surface-variant uppercase font-public-sans mt-2 block">
+                                    {translateTimeDiff(log.time_diff)}
+                                  </span>
+                                </div>
                               </div>
                             );
                           })
@@ -340,7 +349,7 @@ export default function DashboardPage() {
                     </p>
                   </div>
 
-                  <div className="md:w-2/3 relative pl-6">
+                  <div className="md:w-2/3 relative pl-6 max-h-[380px] overflow-y-auto pr-2">
                     {/* Vertical Line */}
                     <div className="absolute left-[35px] top-4 bottom-8 w-[2px] bg-gradient-to-b from-primary via-tertiary to-outline-variant/30"></div>
 
@@ -404,7 +413,7 @@ export default function DashboardPage() {
                                 {format(
                                   new Date(audit.time_formatted),
                                   "dd MMM yyyy, HH:mm",
-                                  { locale: id }
+                                  { locale: id },
                                 )}
                               </p>
                               <p
@@ -428,7 +437,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2 px-6 py-3 bg-secondary-container/50 rounded-full border border-secondary/10">
               <MdOutlineCheckCircle className="text-secondary text-2xl" />
               <span className="font-public-sans text-xs font-bold uppercase tracking-[0.2em] text-secondary">
-                Sistem Donasi dan Kunjungan v1.0.0
+                Sistem Kunjungan dan Donasi v1.0.0
               </span>
             </div>
           </div>

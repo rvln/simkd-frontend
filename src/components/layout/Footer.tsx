@@ -22,22 +22,13 @@ export const Footer = () => {
                 />
               </div>
               <h3 className="font-sans font-black uppercase tracking-[0.05em] text-white">
-                Panti Asuhan Dr Lucas
+                Panti Asuhan Dr. J. Lucas
               </h3>
             </div>
             <p className="font-sans text-sm text-[rgba(209,250,229,0.7)] leading-relaxed">
               Menciptakan transparansi menyeluruh dalam perawatan anak melalui
               arsitektur pelaporan yang jujur dan empati yang mendalam.
             </p>
-            <div className="pt-2">
-              <Image
-                src="/assets/empanti-icon.svg"
-                alt="Icon"
-                width={40}
-                height={40}
-                className="opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
-              />
-            </div>
           </div>
 
           {/* Navigation Sitemap */}
@@ -124,7 +115,7 @@ export const Footer = () => {
                   width={20}
                   height={16}
                 />
-                <p>halo@empanti.org</p>
+                <p>panti.asuhan.drlucas@gmail.com</p>
               </div>
             </div>
           </div>
@@ -136,17 +127,17 @@ export const Footer = () => {
             </h5>
             <p className="font-sans text-sm text-[rgba(209,250,229,0.6)]">
               Dapatkan update berkala mengenai perkembangan dan kebutuhan di
-              Panti Asuhan Dr Lucas.
+              Panti Asuhan Dr. J. Lucas.
             </p>
             <form className="flex w-full" onSubmit={(e) => e.preventDefault()}>
               <input
                 type="email"
                 placeholder="Email Anda"
-                className="flex-1 bg-[#064E3B] text-white placeholder:text-[#6B7280] font-sans text-sm px-4 py-3 rounded-l-lg outline-none focus:ring-2 focus:ring-[#34D399]"
+                className="flex-1 bg-[#064E3B] text-white placeholder:text-[#a9aeb8] font-sans text-sm px-4 py-3 rounded-l-lg outline-none focus:ring-2 focus:ring-[#34D399]"
               />
               <button
                 type="submit"
-                className="bg-[#34D399] text-[#022C22] font-sans font-bold text-sm px-5 py-3 rounded-r-lg hover:bg-[#10B981] transition-colors"
+                className="bg-[#85dbba] text-[#022C22] font-sans font-bold text-sm px-5 py-3 rounded-r-lg hover:bg-[#10B981] transition-colors"
               >
                 Kirim
               </button>
@@ -157,7 +148,7 @@ export const Footer = () => {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-[rgba(209,250,229,0.1)] flex flex-col md:flex-row items-center justify-between gap-6">
           <span className="font-public-sans text-xs uppercase tracking-[0.1em] text-[rgba(209,250,229,0.4)]">
-            &copy; 2026 Panti Asuhan Dr Lucas. SELURUH HAK CIPTA DILINDUNGI.
+            &copy; 2026 Panti Asuhan Dr. J. Lucas. SELURUH HAK CIPTA DILINDUNGI.
           </span>
           <div className="flex items-center gap-8 font-public-sans text-xs uppercase tracking-[0.1em] text-[rgba(209,250,229,0.4)]">
             <Link

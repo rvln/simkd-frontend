@@ -54,7 +54,7 @@ const MOCK_DISTRIBUTION_LOG = [
     id: 1,
     itemName: "Beras Premium",
     qty: "50 kg",
-    target: "Panti Asuhan Dr. Lucas (Dapur Utama)",
+    target: "Panti Asuhan Dr. J. Lucas (Dapur Utama)",
     notes: "Distribusi rutin bulanan untuk kebutuhan pangan.",
     time: "12 Okt 2026, 08:00 WITA"
   },
@@ -62,7 +62,7 @@ const MOCK_DISTRIBUTION_LOG = [
     id: 2,
     itemName: "Sepatu Sekolah Anak",
     qty: "15 Pasang",
-    target: "Panti Asuhan Dr. Lucas (Asrama Putra)",
+    target: "Panti Asuhan Dr. J. Lucas (Asrama Putra)",
     notes: "Pembagian sepatu baru untuk persiapan ujian.",
     time: "11 Okt 2026, 15:30 WITA"
   },
@@ -70,7 +70,7 @@ const MOCK_DISTRIBUTION_LOG = [
     id: 3,
     itemName: "Susu Formula",
     qty: "10 Kaleng",
-    target: "Panti Asuhan Dr. Lucas (Ruang Balita)",
+    target: "Panti Asuhan Dr. J. Lucas (Ruang Balita)",
     notes: "Distribusi tambahan khusus gizi balita.",
     time: "09 Okt 2026, 09:15 WITA"
   }

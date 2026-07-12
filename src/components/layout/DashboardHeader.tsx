@@ -5,7 +5,7 @@ export function DashboardHeader() {
     <nav className="fixed top-0 right-0 left-0 md:left-64 z-50 bg-surface/80 backdrop-blur-xl flex justify-between items-center h-16 px-8 shadow-sm shadow-outline-variant/5 transition-colors duration-300 border-b border-outline-variant/10">
       <div className="flex items-center gap-8">
         <span className="md:hidden text-lg font-black tracking-tighter text-primary font-sans">
-          Panti Asuhan Dr Lucas
+          Panti Asuhan Dr. J. Lucas
         </span>
         <div className="hidden md:flex items-center bg-surface-container-low rounded-full px-4 py-1.5 gap-2 border border-outline-variant/20 focus-within:border-primary/40 transition-colors">
           <span className="material-symbols-outlined text-outline text-sm">

@@ -44,7 +44,7 @@ export default function AuthLayout({
               </div>
               <div>
                 <p className="text-sm font-bold text-black/80 font-public-sans">
-                  Panti Asuhan Dr Lucas
+                  Panti Asuhan Dr. J. Lucas
                 </p>
                 <p className="text-xs text-black/80 font-public-sans">
                   Keluarga untuk setiap anak

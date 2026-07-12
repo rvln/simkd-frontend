@@ -73,6 +73,7 @@ function KonfirmasiContent() {
     searchParams.get("category") || "Kunjungan Biasa",
   );
   const hasDonation = searchParams.get("has_donation") === "1";
+  const emailSent = searchParams.get("email_sent") === "true";
 
   const { dayName, formatted: formattedDate } = parseDate(rawDate);
 
@@ -83,6 +84,19 @@ function KonfirmasiContent() {
          ═══════════════════════════════════════ */}
       <section className="px-6 pt-16 pb-10">
         <div className="max-w-2xl mx-auto text-center">
+          {/* ── Success Banner for Email Sent ── */}
+          {emailSent && (
+            <div className="mb-8 p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-start gap-3 text-left animate-in fade-in slide-in-from-top-4 duration-500 mx-auto w-fit">
+              <FiCheckCircle className="text-emerald-500 mt-0.5 text-xl shrink-0" />
+              <div>
+                <h3 className="text-emerald-900 font-bold mb-1">Berhasil!</h3>
+                <p className="text-sm text-emerald-800">
+                  Detail pengajuan jadwal kunjungan telah dikirim ke email Anda.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Animated heart icon */}
           <div className="flex justify-center mb-8">
             <div className="relative">
@@ -151,9 +165,9 @@ function KonfirmasiContent() {
               <span className="block font-public-sans text-[9px] font-bold uppercase tracking-[0.18em] text-on-surface-variant mb-3">
                 Kategori
               </span>
-              <span className="inline-flex items-center gap-1 bg-primary/10 text-primary font-public-sans text-[9px] font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-2">
+              {/* <span className="inline-flex items-center gap-1 bg-primary/10 text-primary font-public-sans text-[9px] font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-2">
                 Verified Impact
-              </span>
+              </span> */}
               <p className="font-sans font-bold text-sm text-on-surface leading-snug">
                 {category}
               </p>
@@ -179,7 +193,7 @@ function KonfirmasiContent() {
             <div className="absolute bottom-4 left-4 flex items-center gap-2 bg-on-surface/50 backdrop-blur-md rounded-full px-4 py-2">
               <FiCheckCircle className="text-white text-sm" />
               <span className="font-public-sans text-[9px] font-bold uppercase tracking-[0.16em] text-white">
-                Sanctuary Trust Protocol
+                Verified Impact
               </span>
             </div>
           </div>

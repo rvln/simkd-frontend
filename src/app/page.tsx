@@ -20,15 +20,17 @@ import {
 // ── Published VisitReport for Dokumentasi Kegiatan ──────────────────────────
 interface PublishedReport {
   id: string;
-  title: string;        // admin_title OR first-6-words fallback (derived by backend)
+  title: string; // admin_title OR first-6-words fallback (derived by backend)
   content: string;
   visitor_name: string; // PII-masked
   image_path: string[] | null;
   visit_date: string | null;
 }
 
-const API_BASE_PUBLIC = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const STORAGE_BASE = process.env.NEXT_PUBLIC_STORAGE_URL ?? "http://localhost:8000/storage";
+const API_BASE_PUBLIC =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const STORAGE_BASE =
+  process.env.NEXT_PUBLIC_STORAGE_URL ?? "http://localhost:8000/storage";
 
 // ── Jejak Kebaikan: Thank-you message pools ─────────────────────────────────
 const THANK_YOU_DANA = [
@@ -87,7 +89,7 @@ export default function LandingPage() {
     const fetchReports = async () => {
       try {
         const res = await fetch(
-          `${API_BASE_PUBLIC}/api/public/transparansi/laporan?per_page=3`
+          `${API_BASE_PUBLIC}/api/public/transparansi/laporan?per_page=3`,
         );
         if (!res.ok) throw new Error("fetch failed");
         const json = await res.json();
@@ -356,7 +358,10 @@ export default function LandingPage() {
                   </p>
                   {docReports[0].visit_date && (
                     <p className="text-white/50 text-xs mt-2 font-sans">
-                      {new Date(docReports[0].visit_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                      {new Date(docReports[0].visit_date).toLocaleDateString(
+                        "id-ID",
+                        { day: "numeric", month: "long", year: "numeric" },
+                      )}
                     </p>
                   )}
                 </div>
@@ -368,7 +373,7 @@ export default function LandingPage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/20 to-transparent z-10" />
                 <div className="absolute bottom-0 left-0 p-5 md:p-8 z-20">
                   <span className="px-3 py-1 bg-white/20 backdrop-blur-md text-white text-[10px] md:text-xs font-bold rounded-full uppercase tracking-widest mb-2 md:mb-3 inline-block">
-                    Panti Asuhan Dr. Lucas
+                    Panti Asuhan Dr. J. Lucas
                   </span>
                   <h3 className="text-lg md:text-2xl font-bold text-white mb-1 md:mb-2">
                     Dokumentasi Kegiatan Bersama
@@ -406,7 +411,9 @@ export default function LandingPage() {
                   <div className="absolute inset-0 bg-gradient-to-br from-teal-600 to-teal-800" />
                   <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent z-10" />
                   <div className="absolute bottom-0 left-0 p-4 md:p-6 z-20">
-                    <h4 className="text-white font-bold text-sm md:text-base">Kunjungan Bersama</h4>
+                    <h4 className="text-white font-bold text-sm md:text-base">
+                      Kunjungan Bersama
+                    </h4>
                   </div>
                 </div>
               )}
@@ -438,7 +445,9 @@ export default function LandingPage() {
                   <div className="absolute inset-0 bg-gradient-to-br from-teal-500 to-teal-700" />
                   <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent z-10" />
                   <div className="absolute bottom-0 left-0 p-4 md:p-6 z-20">
-                    <h4 className="text-white font-bold text-sm md:text-base">Kegiatan Panti</h4>
+                    <h4 className="text-white font-bold text-sm md:text-base">
+                      Kegiatan Panti
+                    </h4>
                   </div>
                 </div>
               )}
@@ -488,7 +497,9 @@ export default function LandingPage() {
                   </div>
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-1">
-                      <h4 className="font-bold text-gray-900">{d.masked_name}</h4>
+                      <h4 className="font-bold text-gray-900">
+                        {d.masked_name}
+                      </h4>
                       <span
                         className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md ${
                           d.type === "DANA"
@@ -511,9 +522,9 @@ export default function LandingPage() {
                       &ldquo;{donaturMessages[i] ?? ""}&rdquo;
                     </p>
                   </div>
-                  <div className="flex-shrink-0 text-gray-300 hover:text-red-400 transition-colors cursor-pointer pt-1">
+                  {/* <div className="flex-shrink-0 text-gray-300 hover:text-red-400 transition-colors cursor-pointer pt-1">
                     <MdFavoriteBorder className="text-2xl" />
-                  </div>
+                  </div> */}
                 </div>
               ))
             )}

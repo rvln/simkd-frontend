@@ -201,19 +201,101 @@ export default function JadwalKunjunganPage() {
     [capacities],
   );
 
-  /* ── Calendar event markers from upcoming visits ── */
-  const dateHasVisit = useCallback(
-    (date: Date): boolean => {
-      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-      return upcomingVisits.some((v) => v.visit_date === dateStr);
-    },
-    [upcomingVisits],
-  );
-
   /* ── Filter only APPROVED visits for public display ── */
   const approvedVisits = useMemo(
     () => upcomingVisits.filter((v) => v.status === "APPROVED"),
     [upcomingVisits],
+  );
+
+  const dateHasVisit = useCallback(
+    (date: Date): boolean => {
+      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+      return approvedVisits.some((v) => v.visit_date === dateStr);
+    },
+    [approvedVisits],
+  );
+
+  /* ── Custom UI Tooltip ── */
+  const renderDateTooltip = useCallback(
+    (date: Date, isSelected: boolean, colIndex: number) => {
+      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+      
+      const dayCapacities = capacities.filter((c) => {
+        const d = new Date(c.date);
+        const localStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        return localStr === dateStr && c.is_active;
+      });
+
+      const dayVisits = approvedVisits.filter((v) => v.visit_date === dateStr);
+
+      if (dayCapacities.length === 0 && dayVisits.length === 0) return null;
+
+      const isLeftEdge = colIndex <= 1;
+      const isRightEdge = colIndex >= 5;
+
+      const posClass = isLeftEdge
+        ? "left-0"
+        : isRightEdge
+          ? "right-0"
+          : "left-1/2 -translate-x-1/2";
+
+      const arrowClass = isLeftEdge
+        ? "left-6"
+        : isRightEdge
+          ? "right-6"
+          : "left-1/2 -translate-x-1/2";
+
+      return (
+        <div className={`absolute bottom-full ${posClass} mb-3 w-[240px] max-w-[85vw] p-3 bg-white border border-gray-100 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] transition-all duration-200 z-[60] pointer-events-none text-left ${isSelected ? "opacity-100 visible" : "opacity-0 invisible group-hover:opacity-100 group-hover:visible"}`}>
+          {dayCapacities.length > 0 && (
+            <div className="mb-3 last:mb-0">
+              <p className="text-[10px] font-bold text-teal-700 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
+                Tersedia
+              </p>
+              <ul className="space-y-1.5">
+                {dayCapacities.map((c, idx) => {
+                  const slotInfo = SLOT_MAP[c.slot];
+                  const label = slotInfo ? slotInfo.label : c.slot;
+                  const remain = c.quota - c.booked;
+                  return (
+                    <li key={`cap-${idx}`} className="flex justify-between items-center text-xs">
+                      <span className="text-gray-600 font-medium">{label}</span>
+                      <span className={`font-bold px-1.5 py-0.5 rounded-md text-[10px] ${remain === 0 ? 'bg-red-50 text-red-600' : 'bg-teal-50 text-teal-700'}`}>{remain} pax</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+          
+          {dayVisits.length > 0 && (
+            <div className="mb-3 last:mb-0 pt-2 border-t border-gray-100">
+              <p className="text-[10px] font-bold text-blue-700 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-md bg-blue-500"></span>
+                Booking
+              </p>
+              <ul className="space-y-2">
+                {dayVisits.map((v, idx) => {
+                  const slotInfo = v.slot ? SLOT_MAP[v.slot] : null;
+                  const label = slotInfo ? slotInfo.label : v.slot;
+                  return (
+                    <li key={`vis-${idx}`} className="flex flex-col gap-0.5">
+                      <span className="text-xs font-bold text-gray-800">{label}</span>
+                      <span className="text-[10px] text-gray-500 truncate leading-tight">Oleh: {v.visitor_name}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+          
+          {/* Arrow */}
+          <div className={`absolute top-full ${arrowClass} border-[6px] border-transparent border-t-white`} />
+        </div>
+      );
+    },
+    [capacities, approvedVisits]
   );
 
   return (
@@ -292,34 +374,36 @@ export default function JadwalKunjunganPage() {
                     const hasEvent = hasCapacity || hasVisit;
 
                     return (
-                      <button
-                        key={i}
-                        onClick={() => {
-                          if (!isOtherMonth) setSelectedDay(cell.date);
-                        }}
-                        className={`
-                        relative flex flex-col items-center justify-center py-3 md:py-4 rounded-xl
-                        transition-all duration-200 text-sm font-sans font-medium
-                        ${
-                          isOtherMonth
-                            ? "text-on-surface-variant/30 cursor-default"
-                            : isSelected
-                              ? "bg-primary text-white font-bold shadow-ambient"
-                              : hasEvent
-                                ? "bg-primary/1 text-primary font-bold hover:bg-primary/20 cursor-pointer"
-                                : "text-on-surface hover:bg-surface-container-low cursor-pointer"
-                        }
-                      `}
-                      >
-                        {cell.date}
-                        {/* Dot indicator for events */}
-                        {hasEvent && !isSelected && (
-                          <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-primary" />
-                        )}
-                        {hasEvent && isSelected && (
-                          <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-white" />
-                        )}
-                      </button>
+                      <div key={i} className="relative group flex justify-center">
+                        <button
+                          onClick={() => {
+                            if (!isOtherMonth) setSelectedDay(cell.date);
+                          }}
+                          className={`
+                          w-full flex flex-col items-center justify-center py-3 md:py-4 rounded-xl
+                          transition-all duration-200 text-sm font-sans font-medium
+                          ${
+                            isOtherMonth
+                              ? "text-on-surface-variant/30 cursor-default"
+                              : isSelected && hasVisit
+                                ? "ring-4 ring-primary/30 bg-primary text-white font-bold shadow-lg cursor-pointer"
+                                : hasVisit
+                                  ? "bg-primary text-white font-bold shadow-ambient cursor-pointer"
+                                  : isSelected
+                                    ? "ring-2 ring-primary bg-primary/10 text-primary font-bold cursor-pointer"
+                                    : hasCapacity
+                                      ? "bg-primary/5 text-primary font-bold hover:bg-primary/20 cursor-pointer"
+                                      : "text-on-surface hover:bg-surface-container-low cursor-pointer"
+                          }
+                        `}
+                        >
+                          {cell.date}
+                          {hasCapacity && !hasVisit && (
+                            <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-primary" />
+                          )}
+                        </button>
+                        {!isOtherMonth && renderDateTooltip(cell.fullDate, isSelected, i % 7)}
+                      </div>
                     );
                   })}
                 </div>
@@ -329,13 +413,13 @@ export default function JadwalKunjunganPage() {
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-primary" />
                     <span className="font-public-sans text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">
-                      Ada Jadwal / Sesi
+                      Tersedia
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-md bg-primary" />
                     <span className="font-public-sans text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">
-                      Tanggal Terpilih
+                      Reservasi/Booking
                     </span>
                   </div>
                 </div>
@@ -352,7 +436,7 @@ export default function JadwalKunjunganPage() {
                   Kegiatan Mendatang
                 </h2>
                 <span className="font-public-sans text-[11px] font-semibold text-on-surface-variant italic mt-1 block">
-                  Sinkronisasi real-time dari sistem kapasitas
+                  Sinkronisasi real-time dari sistem
                 </span>
               </div>
 
@@ -430,7 +514,7 @@ export default function JadwalKunjunganPage() {
               Rencanakan Momen Berharga Anda
             </h2>
             <p className="text-on-surface-variant font-sans text-base leading-relaxed max-w-md mb-8">
-              Bawa kehangatan untuk anak-anak di Panti Asuhan Dr Lucas. Untuk
+              Bawa kehangatan untuk anak-anak di Panti Asuhan Dr. J. Lucas. Untuk
               memastikan kenyamanan bersama, setiap kunjungan memerlukan akun
               terverifikasi dan persetujuan jadwal.
             </p>
@@ -446,13 +530,13 @@ export default function JadwalKunjunganPage() {
                 </PrimaryButton>
               </Link>
 
-              <Link
+              {/* <Link
                 href="/panduan-kunjungan"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-surface-container-lowest px-7 py-4 rounded-md font-public-sans text-sm font-bold text-on-surface hover:shadow-ambient transition-all border border-outline-variant/15 min-h-[44px]"
               >
                 <FiFileText className="text-primary text-base" />
                 Pelajari Panduan Kunjungan
-              </Link>
+              </Link> */}
             </div>
           </div>
 

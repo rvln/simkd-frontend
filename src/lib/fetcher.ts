@@ -8,6 +8,7 @@ async function baseFetcher<T = unknown>(url: string, options?: RequestInit): Pro
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': 'true',
       ...options?.headers,
     },
     ...options,

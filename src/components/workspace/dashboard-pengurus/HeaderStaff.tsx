@@ -4,8 +4,11 @@ import React from "react";
 import Link from "next/link";
 import { FiBell, FiHelpCircle } from "react-icons/fi";
 import { MobileMenuToggle } from "@/components/workspace/MobileMenuToggle";
+import { useAuth } from "@/hooks/useAuth";
 
 export function HeaderStaff() {
+  const { user } = useAuth();
+
   return (
     <header className="fixed top-0 left-0 right-0 h-20 bg-white/70 backdrop-blur-md z-30 flex items-center justify-between px-4 md:px-8 shadow-[0_4px_30px_rgba(0,0,0,0.03)]">
       {/* Dashboard Title & Mobile Menu */}
@@ -34,17 +37,33 @@ export function HeaderStaff() {
           className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
         >
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-semibold text-gray-800">Admin</p>
+            <p className="text-sm font-semibold text-gray-800">
+              {user?.name?.split(" ")[0] || "Admin"}
+            </p>
             <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">
               Pengurus Panti
             </p>
           </div>
           <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center overflow-hidden shadow-sm">
-            <img
-              src="https://api.dicebear.com/7.x/notionists/svg?seed=Budi"
-              alt="Profil Pengguna"
-              className="w-full h-full object-cover"
-            />
+            {user?.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.avatar}
+                alt="Profil Pengguna"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-sm font-bold text-teal-700">
+                {user?.name
+                  ? user.name
+                      .split(" ")
+                      .map((w) => w[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()
+                  : "?"}
+              </span>
+            )}
           </div>
         </Link>
       </div>

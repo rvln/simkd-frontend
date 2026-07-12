@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, use } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, use, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { GlassContainer } from "@/components/ui/GlassContainer";
@@ -28,6 +28,8 @@ export default function LacakDonasiPage({
   params: Promise<{ resi: string }>;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const emailSent = searchParams.get("emailSent") === "true";
   const resolvedParams = use(params);
   const resi = resolvedParams.resi;
 
@@ -70,15 +72,16 @@ export default function LacakDonasiPage({
   // show courier/logistics UI — the visitor brings the items in person.
   const isVisitBound: boolean = !!donationData?.visit_id;
 
-  const slideshowImages = [
-    "/example_img/unsplash1.png",
-    "/example_img/unsplash2.png",
-    "/example_img/unsplash3.png",
-    "/example_img/unsplash4.png",
-    "/example_img/unsplash5.png",
-  ];
+  const slideshowImages = useMemo<string[]>(() => {
+    if (!donationData?.item_donations) return [];
+    const photos = donationData.item_donations
+      .filter((item: any) => item.photo_url)
+      .map((item: any) => `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/storage/${item.photo_url}`);
+    return photos;
+  }, [donationData]);
 
   useEffect(() => {
+    if (slideshowImages.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentImageIndex((prev) => (prev + 1) % slideshowImages.length);
     }, 5000);
@@ -206,7 +209,20 @@ export default function LacakDonasiPage({
 
   return (
     <div className="min-h-screen bg-surface">
-      <section className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 py-12 lg:py-16">
+      <main className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 py-24 min-h-screen">
+        {/* ── Success Banner for Email Sent ── */}
+        {emailSent && (
+          <div className="mb-8 p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-start gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
+            <MdCheckCircle className="text-emerald-500 mt-0.5 text-xl shrink-0" />
+            <div>
+              <h3 className="text-emerald-900 font-bold mb-1">Berhasil!</h3>
+              <p className="text-sm text-emerald-800">
+                Bukti pengajuan donasi beserta ID Pelacakan telah dikirim ke email Anda.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* ── Header ── */}
         <div className="mb-12">
           <Link
@@ -363,10 +379,11 @@ export default function LacakDonasiPage({
           </div>
         )}
 
-        {/* ── Layout Grid (2 Columns) ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-stretch">
+        {/* ── Layout Grid (1 or 2 Columns) ── */}
+        <div className={`grid grid-cols-1 ${slideshowImages.length > 0 ? "lg:grid-cols-2 gap-12 lg:gap-20" : "max-w-3xl mx-auto"} items-stretch`}>
           {/* LEFT COLUMN: Dokumentasi Donatur */}
-          <div className="relative group flex flex-col">
+          {slideshowImages.length > 0 && (
+            <div className="relative group flex flex-col">
             <div className="aspect-square w-full relative rounded-2xl overflow-hidden bg-surface-container-low shadow-sm transition-all duration-700">
               {/* Slideshow Images */}
               {slideshowImages.map((src, index) => {
@@ -382,6 +399,7 @@ export default function LacakDonasiPage({
                       src={src}
                       alt={`Dokumentasi Barang ${index + 1}`}
                       fill
+                      unoptimized
                       className="object-cover"
                       onError={(e) =>
                         (e.currentTarget.src =
@@ -420,7 +438,8 @@ export default function LacakDonasiPage({
                 ))}
               </div>
             </div>
-          </div>
+            </div>
+          )}
 
           {/* RIGHT COLUMN: Rincian & Aksi */}
           <div className="flex flex-col">
@@ -545,7 +564,7 @@ export default function LacakDonasiPage({
             </div>
           </div>
         </div>
-      </section>
+      </main>
     </div>
   );
 }

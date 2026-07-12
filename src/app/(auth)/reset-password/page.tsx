@@ -42,7 +42,7 @@ function ResetPasswordForm() {
           <div className="inline-flex items-center gap-2 mb-8">
             <MdOutlineSecurity className="text-3xl text-primary" />
             <span className="text-base font-black tracking-tight text-primary uppercase font-sans">
-              Panti Asuhan Dr Lucas
+              Panti Asuhan Dr. J. Lucas
             </span>
           </div>
           <h1 className="text-3xl font-black text-on-surface tracking-tight mb-2 font-sans">
@@ -141,7 +141,7 @@ function ResetPasswordForm() {
           <div className="inline-flex items-center gap-2 mb-8">
             <MdOutlineSecurity className="text-3xl text-primary" />
             <span className="text-base font-black tracking-tight text-primary uppercase font-sans">
-              Panti Asuhan Dr Lucas
+              Panti Asuhan Dr. J. Lucas
             </span>
           </div>
           <h1 className="text-3xl font-black text-on-surface tracking-tight mb-2 font-sans">
@@ -183,7 +183,7 @@ function ResetPasswordForm() {
         <div className="inline-flex items-center gap-2 mb-8">
           <MdOutlineSecurity className="text-3xl text-primary" />
           <span className="text-base font-black tracking-tight text-primary uppercase font-sans">
-            Panti Asuhan Dr Lucas
+            Panti Asuhan Dr. J. Lucas
           </span>
         </div>
         <h1 className="text-3xl font-black text-on-surface tracking-tight mb-2 font-sans">

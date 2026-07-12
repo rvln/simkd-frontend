@@ -8,6 +8,7 @@ import {
   FiLogOut,
   FiGrid,
   FiCheckSquare,
+  FiCheckCircle,
   FiArchive,
   FiTruck,
   FiUser,
@@ -34,7 +35,7 @@ const MENU_ITEMS = [
   {
     name: "Validasi Donasi",
     href: "/dashboard/validasi-donasi",
-    icon: FiCheckSquare,
+    icon: FiCheckCircle,
   },
   {
     name: "Kelola Kebutuhan",
@@ -78,11 +79,11 @@ export function SidebarStaff({ role }: SidebarProps) {
     <>
       {/* Mobile Overlay */}
       <div
-        className={`fixed inset-0 bg-black/20 backdrop-blur-sm z-10 md:hidden transition-all duration-300 ease-in-out ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        className={`fixed inset-0 bg-black/20 backdrop-blur-sm z-30 md:hidden transition-all duration-300 ease-in-out ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
         onClick={() => document.body.classList.remove("sidebar-open")}
       />
       <aside
-        className={`fixed left-0 top-20 h-[calc(100vh-5rem)] w-64 bg-teal-50/50 backdrop-blur-md flex flex-col justify-between py-6 px-4 z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-transform duration-300 ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
+        className={`fixed left-0 top-20 h-[calc(100vh-5rem)] w-64 bg-teal-50/50 backdrop-blur-md flex flex-col justify-between py-6 px-4 z-40 shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-transform duration-300 ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
         <div>
           {/* User Info block */}

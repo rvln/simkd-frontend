@@ -18,7 +18,7 @@ const publicSans = Public_Sans({
 
 export const metadata: Metadata = {
   title: 'SIMDK | Empowering Orchestrated Care',
-  description: 'The Transparent Sanctuary System for Dr. Lucas Orphanage.',
+  description: 'The Transparent Sanctuary System for Dr. J. Lucas Orphanage.',
 };
 
 export default function RootLayout({

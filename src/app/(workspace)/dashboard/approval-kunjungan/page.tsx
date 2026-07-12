@@ -66,9 +66,24 @@ function mapVisit(raw: any) {
   const isHoldingSlot = raw.status === "APPROVED" || (raw.status === "PENDING" && raw.is_rescheduled);
   const isAvailable = raw.capacity ? raw.capacity.booked <= (isHoldingSlot ? 1 : 0) : false;
 
+  const displayApplicant = raw.visitor_type === "Lembaga/Instansi" && raw.visitor_name
+    ? raw.visitor_name
+    : (raw.user?.name ?? "Pengunjung");
+
+  const hasDonation = !!raw.donation;
+  const mappedItems = hasDonation && raw.donation.item_donations
+    ? raw.donation.item_donations.map((item: any) => ({
+        id: item.id,
+        itemName_snapshot: item.itemName_snapshot,
+        qty: item.qty,
+        unit: item.inventory?.unit,
+        photo_url: item.photo_url,
+      }))
+    : [];
+
   return {
     id: raw.id,
-    name: raw.user?.name ?? "Pengunjung",
+    name: displayApplicant,
     date: formattedDate,
     dateYMD: localYMD,
     session: sessionStr,
@@ -76,16 +91,18 @@ function mapVisit(raw: any) {
     badge,
     icon,
     iconBg,
-    applicant: raw.user?.name ?? "Anonim",
+    applicant: displayApplicant,
     applicantRole: raw.user?.email ?? "Tidak ada email",
     details: "Tujuan kunjungan tercatat dalam sistem.",
-    bringsDonation: false,
+    bringsDonation: hasDonation,
+    item_donations: mappedItems,
     capacityAvailable: isAvailable,
     status: raw.status,
     is_expired: !!raw.is_expired,
     is_rescheduled: raw.is_rescheduled,
     admin_notes: raw.admin_notes,
     visitor_type: raw.visitor_type,
+    visitor_name: raw.visitor_name,
     proposal_file_url: raw.proposal_file_url,
   };
 }
@@ -229,7 +246,7 @@ export default function ApprovalKunjunganPage() {
                 <option value="NEEDS_RESCHEDULE">Perlu Ubah Jadwal</option>
                 <option value="REJECTED">Ditolak</option>
                 <option value="EXPIRED">Kedaluwarsa</option>
-                <option value="COMPLETED">Selesai</option>
+                <option value="COMPLETED">Berhasil</option>
                 <option value="NO_SHOW">Tidak Hadir</option>
                 <option value="ALL">Semua</option>
               </select>
@@ -336,10 +353,13 @@ export default function ApprovalKunjunganPage() {
                                   ? "bg-green-100 text-green-700"
                                   : item.status === "REJECTED"
                                     ? "bg-red-100 text-red-700"
-                                    : item.status === "RESCHEDULED" ||
-                                        item.status === "NEEDS_RESCHEDULE"
+                                    : item.status === "RESCHEDULED" || item.status === "NEEDS_RESCHEDULE"
                                       ? "bg-orange-100 text-orange-700"
-                                      : "bg-slate-100 text-slate-700"
+                                      : item.status === "NO_SHOW"
+                                        ? "bg-gray-200 text-gray-800"
+                                        : item.status === "COMPLETED"
+                                          ? "bg-emerald-100 text-emerald-700"
+                                          : "bg-slate-100 text-slate-700"
                           }`}
                         >
                           {isExpired
@@ -350,10 +370,13 @@ export default function ApprovalKunjunganPage() {
                                 ? "DISETUJUI"
                                 : item.status === "REJECTED"
                                   ? "DITOLAK"
-                                  : item.status === "RESCHEDULED" ||
-                                      item.status === "NEEDS_RESCHEDULE"
+                                  : item.status === "RESCHEDULED" || item.status === "NEEDS_RESCHEDULE"
                                     ? "UBAH JADWAL"
-                                    : item.status}
+                                    : item.status === "NO_SHOW"
+                                      ? "TIDAK HADIR"
+                                      : item.status === "COMPLETED"
+                                        ? "BERHASIL"
+                                        : item.status}
                         </span>
                       </div>
                       <FiChevronRight
