@@ -289,7 +289,7 @@ export default function ProfileForm({ roleLabel, defaultValues }: ProfileFormPro
                 type="button" 
                 onClick={() => {
                   reset(defaultValues);
-                  setAvatarUrl(initialAvatarUrl);
+                  setAvatarUrl(user?.avatar || null);
                 }}
                 className="px-6 py-3 bg-transparent text-gray-500 font-bold text-sm rounded-xl hover:bg-gray-50 transition-colors border-none"
               >
