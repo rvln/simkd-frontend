@@ -87,8 +87,8 @@ export default function InvoicePage() {
   };
 
   const handlePayNow = () => {
-    if (data?.snap_token && typeof window.snap !== "undefined") {
-      window.snap.pay(data.snap_token);
+    if (data?.snap_token && typeof (window as any).snap !== "undefined") {
+      (window as any).snap.pay(data.snap_token);
     } else {
       alert("Sistem pembayaran belum siap atau token tidak valid. Silakan muat ulang halaman.");
     }
